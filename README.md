@@ -1,1 +1,1 @@
-# Lab03: Setup a project from scratch
+# Semantic - Correspondence Project
