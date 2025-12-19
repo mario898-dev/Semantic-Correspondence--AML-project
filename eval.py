@@ -3,13 +3,15 @@ import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
 import pandas as pd
+import sys
+sys.path.insert(0, "external/SD4Match")
 
-# Importazioni dai tuoi moduli locali
-from dataset.spair import SPairDataset
+from data.spair import SPairDataset
 from models.dinov2_extractor import DINOv2Extractor
 from utils.matching import find_correspondences
 from utils.metrics import compute_pck_metrics
 from config import cfg  # Assicurati di avere il file config.py
+
 
 def run_evaluation():
     # 1. SETUP DISPOSITIVO E MODELLO
@@ -17,12 +19,11 @@ def run_evaluation():
     print(f"Utilizzando il dispositivo: {device}")
 
     model = DINOv2Extractor(model_type='dinov2_vits14', device=device)
-    
+
     # 2. CARICAMENTO DATASET
-    # Assicurati che il percorso 'data/SPair-71k' sia corretto nella tua macchina
     test_dataset = SPairDataset(
-        data_path='./data/SPair-71k', 
-        split='test', 
+        data_path='external/SD4Match/asset/SPair-71k',
+        split='test',
         img_size=cfg.DATASET.IMG_SIZE
     )
 
@@ -109,13 +110,14 @@ def run_evaluation():
     # 5. STAMPA DEI RISULTATI FINALI
     print(f"\n✅ Valutazione completata!")
     print(f"   Pair usati (>=1 kp valido): {num_pairs_used} / {len(test_dataset)}")
-    print(f"   Keypoint validi: {total_keypoints_valid} / {total_keypoints_all} ({100 * total_keypoints_valid / total_keypoints_all:.1f}%)")
+    print(f"   Keypoint validi: {total_keypoints_valid} / {total_keypoints_all} "
+          f"({100 * total_keypoints_valid / total_keypoints_all:.1f}%)")
 
     pck_per_point = {
         a: (100.0 * correct_points[a] / total_points[a]) if total_points[a] > 0 else 0.0
         for a in alphas
     }
-    
+
     print("\n--- RISULTATI PCK TOTALI ---")
     for a in alphas:
         print(f"PCK@{a:.2f}: {pck_per_point[a]:6.2f}%")
@@ -125,9 +127,11 @@ def run_evaluation():
     for cat in sorted(pck_images_cat.keys()):
         row = [f"{cat:>15}"]
         for a in alphas:
-            pp = (100.0 * correct_points_cat[cat][a] / total_points_cat[cat][a]) if total_points_cat[cat][a] > 0 else 0.0
+            pp = (100.0 * correct_points_cat[cat][a] / total_points_cat[cat][a]) \
+                 if total_points_cat[cat][a] > 0 else 0.0
             row.append(f"PCK@{a:.2f}: {pp:6.2f}%")
         print(" | ".join(row))
+
 
 if __name__ == "__main__":
     run_evaluation()
