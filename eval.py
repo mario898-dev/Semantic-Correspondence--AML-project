@@ -1,49 +1,58 @@
-import sys
 import os
+import sys
 import torch
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
 import pandas as pd
 
-# 1. CARICA PRIMA I TUOI MODULI LOCALI
-# Facendo questo ora, Python caricherà la cartella 'utils' del tuo progetto
+# ============================================================
+# Path robusti (indipendenti dalla working directory)
+# ============================================================
+REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+# --- SD4Match (submodule) ---
+SD4MATCH_ROOT = os.path.join(REPO_ROOT, "external", "SD4Match")
+sys.path.insert(0, SD4MATCH_ROOT)
+
+from data.spair import SPairDataset
+
+# --- TUO CODICE ---
 from models.dinov2_extractor import DINOv2Extractor
-from utils.matching import find_correspondences
-from utils.metrics import compute_pck_metrics 
-from config import Config as cfg
-
-# 2. GESTIONE DEL SOTTOMODULO (Solo dopo i tuoi import)
-original_sys_path = sys.path[:]
-root_dir = os.path.abspath(os.getcwd())
-
-# Temporaneamente cambiamo il path per caricare il dataset di SD4Match
-if root_dir in sys.path: sys.path.remove(root_dir)
-if '' in sys.path: sys.path.remove('')
-sys.path.insert(0, os.path.join(root_dir, "external/SD4Match"))
-
-from dataset.spair import SPairDataset
-
-# Ripristiniamo il path originale subito dopo
-sys.path = original_sys_path
+from project_utils.matching import find_correspondences
+from project_utils.metrics import compute_pck_metrics
+from config import cfg
 
 
 def run_evaluation():
+
+    # ========================================================
     # 1. SETUP DISPOSITIVO E MODELLO
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # ========================================================
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Utilizzando il dispositivo: {device}")
 
-    model = DINOv2Extractor(model_name='dinov2_vits14', device=device)
+    model = DINOv2Extractor(
+        model_name="dinov2_vits14",
+        device=device
+    )
 
-    # 2. CARICAMENTO DATASET
+    # ========================================================
+    # 2. CARICAMENTO DATASET (SD4Match)
+    # ========================================================
     test_dataset = SPairDataset(
-        data_path='external/SD4Match/asset/SPair-71k',
-        split='test',
+        data_path=os.path.join(
+            REPO_ROOT, "external", "SD4Match", "asset", "SPair-71k"
+        ),
+        split="test",
         img_size=cfg.DATASET.IMG_SIZE
     )
 
-    # 3. INIZIALIZZAZIONE ACCUMULATORI PER METRICHE
+    # ========================================================
+    # 3. INIZIALIZZAZIONE METRICHE
+    # ========================================================
     alphas = cfg.EVALUATOR.ALPHA
+
     correct_points = defaultdict(int)
     total_points = defaultdict(int)
     pck_images = defaultdict(list)
@@ -60,19 +69,24 @@ def run_evaluation():
     print(f"VALUTAZIONE TRAINING-FREE su SPair-71k ({len(test_dataset)} pairs)")
     print(f"{'='*60}\n")
 
+    # ========================================================
     # 4. LOOP DI VALUTAZIONE
+    # ========================================================
     for idx in tqdm(range(len(test_dataset))):
+
         batch = test_dataset[idx]
 
         src_img = batch["src_img"].unsqueeze(0).to(device)
         trg_img = batch["trg_img"].unsqueeze(0).to(device)
-        src_kps = batch["src_kps"]  # (N, 2)
-        trg_kps = batch["trg_kps"]  # (N, 2)
+
+        src_kps = batch["src_kps"]        # (N, 2)
+        trg_kps = batch["trg_kps"]        # (N, 2)
+
         category = batch.get("category", "all")
         img_size = cfg.DATASET.IMG_SIZE
         pckthres = batch["pckthres"].item()
 
-        # FIX: validi solo se presenti in ENTRAMBI (src e trg)
+        # ✅ keypoint validi solo se presenti in ENTRAMBI
         valid_mask = (
             (src_kps[:, 0] >= 0) & (src_kps[:, 1] >= 0) &
             (trg_kps[:, 0] >= 0) & (trg_kps[:, 1] >= 0)
@@ -89,13 +103,16 @@ def run_evaluation():
 
         num_pairs_used += 1
 
+        # ----------------------------------------------------
         # Estrazione feature
+        # ----------------------------------------------------
         with torch.no_grad():
-            # Prendiamo il primo elemento perché il modello restituisce [Batch, C, H, W]
-            src_feats = model(src_img)[0]
-            trg_feats = model(trg_img)[0]
+            src_feats = model(src_img)[0]  # (C, Hf, Wf)
+            trg_feats = model(trg_img)[0]  # (C, Hf, Wf)
 
-        # Calcolo corrispondenze
+        # ----------------------------------------------------
+        # Corrispondenze
+        # ----------------------------------------------------
         pred_kps_valid = find_correspondences(
             src_feats,
             trg_feats,
@@ -103,7 +120,9 @@ def run_evaluation():
             img_size
         ).cpu()
 
-        # Aggiornamento metriche per ogni alpha (es. 0.01, 0.05, 0.1)
+        # ----------------------------------------------------
+        # Metriche
+        # ----------------------------------------------------
         for alpha in alphas:
             num_correct, num_total, pck_img = compute_pck_metrics(
                 pred_kps_valid,
@@ -122,37 +141,58 @@ def run_evaluation():
                 pck_images[alpha].append(pck_img)
                 pck_images_cat[category][alpha].append(pck_img)
 
-    # 5. STAMPA DEI RISULTATI FINALI
+    # ========================================================
+    # 5. RISULTATI FINALI
+    # ========================================================
     print(f"\n✅ Valutazione completata!")
-    print(f"   Pair usati (>=1 kp valido): {num_pairs_used} / {len(test_dataset)}")
-    print(f"   Keypoint validi: {total_keypoints_valid} / {total_keypoints_all} "
-          f"({100 * total_keypoints_valid / total_keypoints_all:.1f}%)")
+    print(
+        f"   Pair usati (>=1 kp valido): "
+        f"{num_pairs_used} / {len(test_dataset)}"
+    )
+    print(
+        f"   Keypoint validi: {total_keypoints_valid} / "
+        f"{total_keypoints_all} "
+        f"({100 * total_keypoints_valid / total_keypoints_all:.1f}%)"
+    )
 
     pck_per_point = {
-        a: (100.0 * correct_points[a] / total_points[a]) if total_points[a] > 0 else 0.0
+        a: (100.0 * correct_points[a] / total_points[a])
+        if total_points[a] > 0 else 0.0
         for a in alphas
     }
 
-    print("\n--- RISULTATI PCK TOTALI ---")
-    for a in alphas:
-        print(f"PCK@{a:.2f}: {pck_per_point[a]:6.2f}%")
+    pck_per_image = {
+        a: (sum(pck_images[a]) / len(pck_images[a]))
+        if len(pck_images[a]) > 0 else 0.0
+        for a in alphas
+    }
 
-    # Stampa per categoria
-    print("\n--- PCK PER CATEGORIA ---")
+    print("\n--- PCK (dataset) ---")
+    for a in alphas:
+        print(
+            f"PCK@{a:.2f}  "
+            f"per-point: {pck_per_point[a]:6.2f}%   "
+            f"per-image: {pck_per_image[a]:6.2f}%"
+        )
+
+    print("\n--- PCK (per category) ---")
     for cat in sorted(pck_images_cat.keys()):
         row = [f"{cat:>15}"]
         for a in alphas:
-            pp = (100.0 * correct_points_cat[cat][a] / total_points_cat[cat][a]) \
-                 if total_points_cat[cat][a] > 0 else 0.0
-            row.append(f"PCK@{a:.2f}: {pp:6.2f}%")
-        print(" | ".join(row))
+            pp = (
+                100.0 * correct_points_cat[cat][a] /
+                total_points_cat[cat][a]
+            ) if total_points_cat[cat][a] > 0 else 0.0
+
+            pi = (
+                sum(pck_images_cat[cat][a]) /
+                len(pck_images_cat[cat][a])
+            ) if len(pck_images_cat[cat][a]) > 0 else 0.0
+
+            row.append(f"PCK@{a:.2f} pp {pp:6.2f}% | pi {pi:6.2f}%")
+
+        print("   ".join(row))
 
 
 if __name__ == "__main__":
     run_evaluation()
-
-
-
-
-
-
