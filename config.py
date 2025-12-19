@@ -1,0 +1,13 @@
+class Config:
+    class DATASET:
+        NAME = 'spair'
+        ROOT = './dataset'
+        IMG_SIZE = 518
+        MEAN = False
+        NORM_MEAN = [0.485, 0.456, 0.406]
+        NORM_STD = [0.229, 0.224, 0.225]
+        STD = [0.229, 0.224, 0.225]
+
+    class EVALUATOR:
+        ALPHA = [0.05, 0.10, 0.15, 0.20]
+        BY = 'bbox'
