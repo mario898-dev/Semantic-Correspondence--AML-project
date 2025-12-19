@@ -1,30 +1,24 @@
+import sys
+import os
 import torch
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
 import pandas as pd
-import sys
-import os
-import importlib.util
+
 
 sys.path.insert(0, os.path.abspath("external/SD4Match"))
-
-def load_module_from_path(module_name, file_path):
-    spec = importlib.util.spec_from_file_location(module_name, file_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-matching = load_module_from_path("matching", "utils/matching.py")
-metrics_mod = load_module_from_path("metrics", "utils/metrics.py")
-find_correspondences = matching.find_correspondences
-compute_pck_metrics = metrics_mod.compute_pck_metrics
-
-# 3. Importiamo il dataset dal sottomodulo (la cartella si chiama 'dataset')
 from dataset.spair import SPairDataset
+
+sys.path.pop(0)
+if 'utils' in sys.modules: 
+    del sys.modules['utils']
+
 from models.dinov2_extractor import DINOv2Extractor
-# ---------------------------------------------------
-from config import Config as cfg  # Assicurati di avere il file config.py
+from utils.matching import find_correspondences
+
+from utils.metrics import compute_pck_metrics 
+from config import Config as cfg
 
 
 def run_evaluation():
@@ -149,6 +143,7 @@ def run_evaluation():
 
 if __name__ == "__main__":
     run_evaluation()
+
 
 
 
