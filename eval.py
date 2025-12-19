@@ -41,9 +41,9 @@ def run_evaluation():
     # 2. CARICAMENTO DATASET (SD4Match)
     # ========================================================
     test_dataset = SPairDataset(
-    split="test",
-    thres="bbox",
-    img_size=Config.DATASET.IMG_SIZE)
+    cfg=Config,    # <--- La classe Config contiene DATASET.ROOT e DATASET.IMG_SIZE
+    split="test"
+    )
 
     # ========================================================
     # 3. INIZIALIZZAZIONE METRICHE

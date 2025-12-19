@@ -1,8 +1,13 @@
+import os
+
 class Config:
     class DATASET:
         NAME = 'spair'
-        ROOT = './dataset'
+        # Percorso dove viene scaricato SPair-71k 
+        ROOT = os.path.join(os.getcwd(), 'external/SD4Match/asset/SPair-71k')
+        
         IMG_SIZE = 518
+        
         MEAN = False
         NORM_MEAN = [0.485, 0.456, 0.406]
         NORM_STD = [0.229, 0.224, 0.225]
