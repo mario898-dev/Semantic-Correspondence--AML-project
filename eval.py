@@ -15,7 +15,7 @@ REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 SD4MATCH_ROOT = os.path.join(REPO_ROOT, "external", "SD4Match")
 sys.path.insert(0, SD4MATCH_ROOT)
 
-from data.spair import SPairDataset
+from dataset.spair import SPairDataset
 
 # --- TUO CODICE ---
 from models.dinov2_extractor import DINOv2Extractor
