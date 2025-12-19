@@ -4,7 +4,7 @@ class Config:
     class DATASET:
         NAME = 'spair'
         # Percorso dove viene scaricato SPair-71k 
-        ROOT = os.path.join(os.getcwd(), 'external/SD4Match/asset/SPair-71k')
+        ROOT = os.path.join(os.getcwd(), 'external/SD4Match/asset')
         
         IMG_SIZE = 518
         
