@@ -10,7 +10,7 @@ from dataset.spair import SPairDataset
 from models.dinov2_extractor import DINOv2Extractor
 from utils.matching import find_correspondences
 from utils.metrics import compute_pck_metrics
-from config import cfg  # Assicurati di avere il file config.py
+from config import Config as cfg  # Assicurati di avere il file config.py
 
 
 def run_evaluation():
@@ -135,4 +135,5 @@ def run_evaluation():
 
 if __name__ == "__main__":
     run_evaluation()
+
 
