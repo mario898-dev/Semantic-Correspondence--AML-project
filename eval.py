@@ -6,7 +6,7 @@ import pandas as pd
 import sys
 sys.path.insert(0, "external/SD4Match")
 
-from data.spair import SPairDataset
+from dataset.spair import SPairDataset
 from models.dinov2_extractor import DINOv2Extractor
 from utils.matching import find_correspondences
 from utils.metrics import compute_pck_metrics
@@ -135,3 +135,4 @@ def run_evaluation():
 
 if __name__ == "__main__":
     run_evaluation()
+
