@@ -6,24 +6,26 @@ from tqdm import tqdm
 from collections import defaultdict
 import pandas as pd
 
-# 1. GESTIONE PULITA DEGLI IMPORT (Senza rinominare cartelle)
-# Salviamo il path originale
+# 1. CARICA PRIMA I TUOI MODULI LOCALI
+# Facendo questo ora, Python caricherà la cartella 'utils' del tuo progetto
+from models.dinov2_extractor import DINOv2Extractor
+from utils.matching import find_correspondences
+from utils.metrics import compute_pck_metrics 
+from config import Config as cfg
+
+# 2. GESTIONE DEL SOTTOMODULO (Solo dopo i tuoi import)
 original_sys_path = sys.path[:]
 root_dir = os.path.abspath(os.getcwd())
 
-
+# Temporaneamente cambiamo il path per caricare il dataset di SD4Match
 if root_dir in sys.path: sys.path.remove(root_dir)
 if '' in sys.path: sys.path.remove('')
 sys.path.insert(0, os.path.join(root_dir, "external/SD4Match"))
+
 from dataset.spair import SPairDataset
 
+# Ripristiniamo il path originale subito dopo
 sys.path = original_sys_path
-from models.dinov2_extractor import DINOv2Extractor
-from utils.matching import find_correspondences
-
-# NOTA: Nel tuo progetto il file si chiama 'mtrics.py' (senza la 'e')
-from utils.metrics import compute_pck_metrics 
-from config import Config as cfg
 
 
 def run_evaluation():
@@ -148,6 +150,7 @@ def run_evaluation():
 
 if __name__ == "__main__":
     run_evaluation()
+
 
 
 
