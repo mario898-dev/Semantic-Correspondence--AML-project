@@ -41,12 +41,9 @@ def run_evaluation():
     # 2. CARICAMENTO DATASET (SD4Match)
     # ========================================================
     test_dataset = SPairDataset(
-    root=os.path.join(  # <--- Cambia 'data_path' in 'root'
-        REPO_ROOT, "external", "SD4Match", "asset", "SPair-71k"
-    ),
     split="test",
-    img_size=Config.DATASET.IMG_SIZE
-  )
+    thres="bbox",
+    img_size=cfg.DATASET.IMG_SIZE,)
 
     # ========================================================
     # 3. INIZIALIZZAZIONE METRICHE
