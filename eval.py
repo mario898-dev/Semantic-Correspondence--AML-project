@@ -33,7 +33,7 @@ def run_evaluation():
     print(f"Utilizzando il dispositivo: {device}")
 
     model = DINOv2Extractor(
-        model_name="dinov2_vits14",
+        model_name="dinov2_vitb14",
         device=device
     )
 
@@ -193,3 +193,4 @@ def run_evaluation():
 
 if __name__ == "__main__":
     run_evaluation()
+
