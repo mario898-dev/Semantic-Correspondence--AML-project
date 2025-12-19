@@ -6,17 +6,22 @@ from tqdm import tqdm
 from collections import defaultdict
 import pandas as pd
 
+# 1. GESTIONE PULITA DEGLI IMPORT (Senza rinominare cartelle)
+# Salviamo il path originale
+original_sys_path = sys.path[:]
+root_dir = os.path.abspath(os.getcwd())
 
-sys.path.insert(0, os.path.abspath("external/SD4Match"))
+
+if root_dir in sys.path: sys.path.remove(root_dir)
+if '' in sys.path: sys.path.remove('')
+sys.path.insert(0, os.path.join(root_dir, "external/SD4Match"))
 from dataset.spair import SPairDataset
 
-sys.path.pop(0)
-if 'utils' in sys.modules: 
-    del sys.modules['utils']
-
+sys.path = original_sys_path
 from models.dinov2_extractor import DINOv2Extractor
 from utils.matching import find_correspondences
 
+# NOTA: Nel tuo progetto il file si chiama 'mtrics.py' (senza la 'e')
 from utils.metrics import compute_pck_metrics 
 from config import Config as cfg
 
@@ -26,7 +31,7 @@ def run_evaluation():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Utilizzando il dispositivo: {device}")
 
-    model = DINOv2Extractor(model_type='dinov2_vits14', device=device)
+    model = DINOv2Extractor(model_name='dinov2_vits14', device=device)
 
     # 2. CARICAMENTO DATASET
     test_dataset = SPairDataset(
@@ -143,6 +148,7 @@ def run_evaluation():
 
 if __name__ == "__main__":
     run_evaluation()
+
 
 
 
