@@ -43,7 +43,7 @@ def run_evaluation():
     test_dataset = SPairDataset(
     split="test",
     thres="bbox",
-    img_size=cfg.DATASET.IMG_SIZE,)
+    img_size=Config.DATASET.IMG_SIZE)
 
     # ========================================================
     # 3. INIZIALIZZAZIONE METRICHE
