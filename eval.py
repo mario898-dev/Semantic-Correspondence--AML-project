@@ -21,7 +21,7 @@ from dataset.spair import SPairDataset
 from models.dinov2_extractor import DINOv2Extractor
 from project_utils.matching import find_correspondences
 from project_utils.metrics import compute_pck_metrics
-from config import Cfg 
+from project_config import Config 
 
 
 def run_evaluation():
@@ -45,13 +45,13 @@ def run_evaluation():
             REPO_ROOT, "external", "SD4Match", "asset", "SPair-71k"
         ),
         split="test",
-        img_size=Cfg.DATASET.IMG_SIZE
+        img_size=Config.DATASET.IMG_SIZE
     )
 
     # ========================================================
     # 3. INIZIALIZZAZIONE METRICHE
     # ========================================================
-    alphas = Cfg.EVALUATOR.ALPHA
+    alphas = Config.EVALUATOR.ALPHA
 
     correct_points = defaultdict(int)
     total_points = defaultdict(int)
@@ -83,7 +83,7 @@ def run_evaluation():
         trg_kps = batch["trg_kps"]        # (N, 2)
 
         category = batch.get("category", "all")
-        img_size = Cfg.DATASET.IMG_SIZE
+        img_size = Config.DATASET.IMG_SIZE
         pckthres = batch["pckthres"].item()
 
         # ✅ keypoint validi solo se presenti in ENTRAMBI

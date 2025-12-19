@@ -5,3 +5,4 @@ pillow
 tqdm
 matplotlib
 pandas
+yacs
