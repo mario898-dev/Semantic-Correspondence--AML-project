@@ -1,3 +1,6 @@
+import torch
+import torch.nn as nn
+
 class DINOv2Extractor(nn.Module):
     def __init__(self, model_name='dinov2_vitb14', device='cuda'):
         super().__init__()
