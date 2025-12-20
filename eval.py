@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
 import pandas as pd
+import wandb
 
 # ============================================================
 # Path robusti (indipendenti dalla working directory)
@@ -67,9 +68,23 @@ def run_evaluation():
     print(f"{'='*60}\n")
 
     # ========================================================
+    #   WANDB
+    # ========================================================
+    wandb.init(
+    project="AML-Semantic-Correspondence",
+    name="DINOv2_vitb14-training-free",
+    config={
+        "backbone": "dinov2_vitb14",
+        "mode": "training-free",
+        "dataset": "SPair-71k",
+        "pck_thresholds": [0.05, 0.1, 0.15],
+    }
+)
+
+    # ========================================================
     # 4. LOOP DI VALUTAZIONE
     # ========================================================
-    for idx in tqdm(range(len(test_dataset))):
+    for idx in tqdm(range(len(test_dataset), 10)):
 
         batch = test_dataset[idx]
 
@@ -157,12 +172,15 @@ def run_evaluation():
         if total_points[a] > 0 else 0.0
         for a in alphas
     }
+    wandb.log({f"PCK@{a:.2f}_per_point": pck_per_point[a] for a in alphas})
 
     pck_per_image = {
         a: (sum(pck_images[a]) / len(pck_images[a]))
         if len(pck_images[a]) > 0 else 0.0
         for a in alphas
     }
+    wandb.log({f"PCK@{a:.2f}_per_image": pck_per_image[a] for a in alphas})
+
 
     print("\n--- PCK (dataset) ---")
     for a in alphas:
@@ -172,9 +190,19 @@ def run_evaluation():
             f"per-image: {pck_per_image[a]:6.2f}%"
         )
 
+    cat_table = wandb.Table(
+    columns=[
+        "category",
+        *[f"PCK@{a:.2f}_per_point" for a in alphas],
+        *[f"PCK@{a:.2f}_per_image" for a in alphas],
+    ]
+)
+
     print("\n--- PCK (per category) ---")
     for cat in sorted(pck_images_cat.keys()):
-        row = [f"{cat:>15}"]
+        # per-point e per-image numerici (non stringhe)
+        pp_vals = []
+        pi_vals = []
         for a in alphas:
             pp = (
                 100.0 * correct_points_cat[cat][a] /
@@ -186,9 +214,24 @@ def run_evaluation():
                 len(pck_images_cat[cat][a])
             ) if len(pck_images_cat[cat][a]) > 0 else 0.0
 
-            row.append(f"PCK@{a:.2f} pp {pp:6.2f}% | pi {pi:6.2f}%")
+            pp_vals.append(pp)
+            pi_vals.append(pi)
 
-        print("   ".join(row))
+        # print come prima
+        pretty = [f"{cat:>15}"]
+        for i, a in enumerate(alphas):
+            pretty.append(f"PCK@{a:.2f} pp {pp_vals[i]:6.2f}% | pi {pi_vals[i]:6.2f}%")
+        print("   ".join(pretty))
+
+        # log tabella
+        cat_table.add_data(cat, *pp_vals, *pi_vals)
+
+    wandb.log({"PCK_per_category": cat_table})
+
+    wandb.finish()
+
+
+
 
 
 if __name__ == "__main__":
