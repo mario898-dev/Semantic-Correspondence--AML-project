@@ -44,6 +44,7 @@ def run_evaluation():
     test_dataset = SPairDataset(
     cfg=Config,    # <--- La classe Config contiene DATASET.ROOT e DATASET.IMG_SIZE
     split="test"
+    category="cat"
     )
 
     # ========================================================
@@ -94,7 +95,7 @@ def run_evaluation():
         src_kps = batch["src_kps"]        # (N, 2)
         trg_kps = batch["trg_kps"]        # (N, 2)
 
-        category = batch.get("category", "cat")
+        category = batch.get("category", "all")
         img_size = Config.DATASET.IMG_SIZE
         pckthres = batch["pckthres"].item()
 
