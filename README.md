@@ -26,5 +26,8 @@ cd ../../../
 
 - Lancia l’evaluation:
 ```bash
-!python eval.py
+!python eval.py --backbone [name] --category [name] --wandb
 ```
+L'argomento backbone è obbligatorio\
+L'argomento category se non specificato indica "all" categories\
+L'argomento Wandb va inserito solo se si vuole utilizzare wandb

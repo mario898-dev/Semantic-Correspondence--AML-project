@@ -254,9 +254,6 @@ def run_evaluation(args):
     wandb.finish()
 
 
-
-
-
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
