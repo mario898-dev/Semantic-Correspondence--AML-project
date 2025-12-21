@@ -1,11 +1,10 @@
 import os
 import sys
 import torch
-import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
-import pandas as pd
 import wandb
+from project_utils.cli import parse_eval_args
 
 # ============================================================
 # Path robusti (indipendenti dalla working directory)
@@ -24,8 +23,29 @@ from project_utils.matching import find_correspondences
 from project_utils.metrics import compute_pck_metrics
 from project_config import Config 
 
+def build_model(backbone: str, device):
+    if backbone == "dinov2_vitb":
+        return DINOv2Extractor("dinov2_vitb14", device)
 
-def run_evaluation():
+    if backbone == "dinov2_vitl":
+        return DINOv2Extractor("dinov2_vitl14", device)
+
+    if backbone == "dinov3_vitb":
+        from models.dinov3_extractor import DINOv3Extractor
+        return DINOv3Extractor("dinov3_vitb", device)
+
+    if backbone == "dinov3_vitl":
+        from models.dinov3_extractor import DINOv3Extractor
+        return DINOv3Extractor("dinov3_vitl", device)
+
+    if backbone == "sam_vitb":
+        from models.sam_extractor import SAMExtractor
+        return SAMExtractor("vit_b", device)
+
+    raise ValueError(f"Backbone non supportato: {backbone}")
+
+
+def run_evaluation(args):
 
     # ========================================================
     # 1. SETUP DISPOSITIVO E MODELLO
@@ -33,10 +53,7 @@ def run_evaluation():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Utilizzando il dispositivo: {device}")
 
-    model = DINOv2Extractor(
-        model_name="dinov2_vitb14",
-        device=device
-    )
+    model = build_model(args.backbone, device)
 
     # ========================================================
     # 2. CARICAMENTO DATASET (SD4Match)
@@ -44,7 +61,7 @@ def run_evaluation():
     test_dataset = SPairDataset(
     cfg=Config,    # <--- La classe Config contiene DATASET.ROOT e DATASET.IMG_SIZE
     split="test",
-    category="cat"
+    category=args.category
     )
 
     # ========================================================
@@ -71,16 +88,19 @@ def run_evaluation():
     # ========================================================
     #   WANDB
     # ========================================================
-    wandb.init(
-    project="AML-Semantic-Correspondence",
-    name="DINOv2_vitb14-training-free",
-    config={
-        "backbone": "dinov2_vitb14",
-        "mode": "training-free",
-        "dataset": "SPair-71k",
-        "pck_thresholds": [0.05, 0.1, 0.15],
-    }
-)
+    if args.wandb:
+        wandb.init(
+            project="AML-Semantic-Correspondence",
+            name=f"{args.backbone}-{args.category}",
+            mode=args.wandb_mode,
+            config={
+                "backbone": args.backbone,
+                "category": args.category,
+                "dataset": "SPair-71k",
+                "mode": "training-free",
+                "pck_thresholds": Config.EVALUATOR.ALPHA,
+            }
+        )
 
     # ========================================================
     # 4. LOOP DI VALUTAZIONE
@@ -95,7 +115,7 @@ def run_evaluation():
         src_kps = batch["src_kps"]        # (N, 2)
         trg_kps = batch["trg_kps"]        # (N, 2)
 
-        category = batch.get("category", "all")
+        category = batch.get("category", "all") #batch[category]
         img_size = Config.DATASET.IMG_SIZE
         pckthres = batch["pckthres"].item()
 
@@ -173,16 +193,13 @@ def run_evaluation():
         if total_points[a] > 0 else 0.0
         for a in alphas
     }
-    wandb.log({f"PCK@{a:.2f}_per_point": pck_per_point[a] for a in alphas})
 
     pck_per_image = {
         a: (sum(pck_images[a]) / len(pck_images[a]))
         if len(pck_images[a]) > 0 else 0.0
         for a in alphas
     }
-    wandb.log({f"PCK@{a:.2f}_per_image": pck_per_image[a] for a in alphas})
-
-
+    
     print("\n--- PCK (dataset) ---")
     for a in alphas:
         print(
@@ -190,14 +207,17 @@ def run_evaluation():
             f"per-point: {pck_per_point[a]:6.2f}%   "
             f"per-image: {pck_per_image[a]:6.2f}%"
         )
+    if args.wandb:
+        wandb.log({f"PCK@{a:.2f}_per_point": pck_per_point[a] for a in alphas})
+        wandb.log({f"PCK@{a:.2f}_per_image": pck_per_image[a] for a in alphas})
 
-    cat_table = wandb.Table(
-    columns=[
-        "category",
-        *[f"PCK@{a:.2f}_per_point" for a in alphas],
-        *[f"PCK@{a:.2f}_per_image" for a in alphas],
-    ]
-)
+        cat_table = wandb.Table(
+            columns=[
+                "category",
+                *[f"PCK@{a:.2f}_per_point" for a in alphas],
+                *[f"PCK@{a:.2f}_per_image" for a in alphas],
+            ]
+        )
 
     print("\n--- PCK (per category) ---")
     for cat in sorted(pck_images_cat.keys()):
@@ -218,14 +238,16 @@ def run_evaluation():
             pp_vals.append(pp)
             pi_vals.append(pi)
 
-        # print come prima
-        pretty = [f"{cat:>15}"]
-        for i, a in enumerate(alphas):
-            pretty.append(f"PCK@{a:.2f} pp {pp_vals[i]:6.2f}% | pi {pi_vals[i]:6.2f}%")
-        print("   ".join(pretty))
-
-        # log tabella
         cat_table.add_data(cat, *pp_vals, *pi_vals)
+
+    #    # print come prima
+    #    pretty = [f"{cat:>15}"]
+    #    for i, a in enumerate(alphas):
+    #        pretty.append(f"PCK@{a:.2f} pp {pp_vals[i]:6.2f}% | pi {pi_vals[i]:6.2f}%")
+    #    print("   ".join(pretty))
+
+    #    # log tabella
+    #    cat_table.add_data(cat, *pp_vals, *pi_vals)
 
     wandb.log({"PCK_per_category": cat_table})
 
@@ -236,5 +258,6 @@ def run_evaluation():
 
 
 if __name__ == "__main__":
-    run_evaluation()
+    args = parse_eval_args()
+    run_evaluation(args)
 
