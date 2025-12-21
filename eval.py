@@ -84,7 +84,7 @@ def run_evaluation():
     # ========================================================
     # 4. LOOP DI VALUTAZIONE
     # ========================================================
-    for idx in tqdm(range(len(test_dataset), 10)):
+    for idx in tqdm(range(len(test_dataset))):
 
         batch = test_dataset[idx]
 
@@ -94,7 +94,7 @@ def run_evaluation():
         src_kps = batch["src_kps"]        # (N, 2)
         trg_kps = batch["trg_kps"]        # (N, 2)
 
-        category = batch.get("category", "all")
+        category = batch.get("category", "cat")
         img_size = Config.DATASET.IMG_SIZE
         pckthres = batch["pckthres"].item()
 
