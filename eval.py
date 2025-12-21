@@ -43,7 +43,7 @@ def run_evaluation():
     # ========================================================
     test_dataset = SPairDataset(
     cfg=Config,    # <--- La classe Config contiene DATASET.ROOT e DATASET.IMG_SIZE
-    split="test"
+    split="test",
     category="cat"
     )
 
