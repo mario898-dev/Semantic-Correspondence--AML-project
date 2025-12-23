@@ -3,7 +3,7 @@ import torch.nn as nn
 from segment_anything import sam_model_registry
 
 class SAMExtractor(nn.Module):
-    def __init__(self, model_type: str,checkpoint=None, device: str = "cuda"):
+    def __init__(self, model_type: str, device: str = "cuda"):
         super().__init__()
         self.device = device
 

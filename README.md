@@ -14,6 +14,10 @@ cd Semantic-Correspondence--AML-project
 ```bash
 pip install -r requirements.txt
 ```
+Per SAM
+```bash
+python scripts/setup_sam.py
+```
 
 - Scarica SPair-71k nella cartella che usa SD4Match
 ```bash

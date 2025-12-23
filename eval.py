@@ -42,7 +42,6 @@ def build_model(backbone: str, device: str):
     elif backbone == "sam_vitb":
         return SAMExtractor(
             model_type="vit_b",
-            checkpoint="path/to/sam_vitb.pth",
             device=device,
         )
 
