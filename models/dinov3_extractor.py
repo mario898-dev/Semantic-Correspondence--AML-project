@@ -5,7 +5,7 @@ class DINOv3Extractor(nn.Module):
     def __init__(
         self,
         repo_dir: str,
-        model_name: str = "dinov3_vitb16",
+        model_name: str,
         weights: str = None, #[inseire url dei pesi]
         device: str = "cuda",
     ):

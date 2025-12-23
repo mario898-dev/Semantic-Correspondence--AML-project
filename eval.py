@@ -17,8 +17,9 @@ sys.path.insert(0, SD4MATCH_ROOT)
 
 from dataset.spair import SPairDataset
 
-# --- TUO CODICE ---
 from models.dinov2_extractor import DINOv2Extractor
+from models.SAM_extractor import SAMExtractor
+from models.dinov3_extractor import DINOv3Extractor
 from project_utils.matching import find_correspondences
 from project_utils.metrics import compute_pck_metrics
 from project_config import Config 
@@ -29,9 +30,6 @@ def build_model(backbone: str, device: str):
 
     elif backbone == "dinov2_vitl":
         return DINOv2Extractor("dinov2_vitl14", device)
-
-    elif backbone == "dinov2_vitg":
-        return DINOv2Extractor("dinov2_vitg14", device)
 
     elif backbone == "dinov3_vitb":
         return DINOv3Extractor(
