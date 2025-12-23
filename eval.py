@@ -23,26 +23,33 @@ from project_utils.matching import find_correspondences
 from project_utils.metrics import compute_pck_metrics
 from project_config import Config 
 
-def build_model(backbone: str, device):
+def build_model(backbone: str, device: str):
     if backbone == "dinov2_vitb":
         return DINOv2Extractor("dinov2_vitb14", device)
 
-    if backbone == "dinov2_vitl":
+    elif backbone == "dinov2_vitl":
         return DINOv2Extractor("dinov2_vitl14", device)
 
-    if backbone == "dinov3_vitb":
-        from models.dinov3_extractor import DINOv3Extractor
-        return DINOv3Extractor("dinov3_vitb", device)
+    elif backbone == "dinov2_vitg":
+        return DINOv2Extractor("dinov2_vitg14", device)
 
-    if backbone == "dinov3_vitl":
-        from models.dinov3_extractor import DINOv3Extractor
-        return DINOv3Extractor("dinov3_vitl", device)
+    elif backbone == "dinov3_vitb":
+        return DINOv3Extractor(
+            repo_dir="external/dinov3",
+            model_name="dinov3_vitb16",
+            weights="path/to/weights.pth",
+            device=device,
+        )
 
-    if backbone == "sam_vitb":
-        from models.sam_extractor import SAMExtractor
-        return SAMExtractor("vit_b", device)
+    elif backbone == "sam_vitb":
+        return SAMExtractor(
+            model_type="vit_b",
+            checkpoint="path/to/sam_vitb.pth",
+            device=device,
+        )
 
-    raise ValueError(f"Backbone non supportato: {backbone}")
+    else:
+        raise ValueError(f"Unknown backbone: {backbone}")
 
 
 def run_evaluation(args):
