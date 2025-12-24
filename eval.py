@@ -31,7 +31,7 @@ def build_model(backbone: str, device: str):
     elif backbone == "dinov2_vitl":
         return DINOv2Extractor("dinov2_vitl14", device)
 
-    elif backbone == "dinov3_vits":
+    elif backbone == "dinov3_vits16":
         return DINOv3Extractor(
             repo_dir="external/dinov3",
             model_name="dinov3_vits16",
@@ -261,4 +261,5 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
