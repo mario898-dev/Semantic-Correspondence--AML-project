@@ -25,10 +25,10 @@ from project_utils.metrics import compute_pck_metrics
 from project_config import Config 
 
 def build_model(backbone: str, device: str):
-    if backbone == "dinov2_vitb":
+    if backbone == "dinov2_vitb14":
         return DINOv2Extractor("dinov2_vitb14", device)
 
-    elif backbone == "dinov2_vitl":
+    elif backbone == "dinov2_vitl14":
         return DINOv2Extractor("dinov2_vitl14", device)
 
     elif backbone == "dinov3_vits16":
@@ -261,5 +261,6 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
 
