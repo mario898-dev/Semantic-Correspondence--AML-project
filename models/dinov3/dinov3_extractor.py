@@ -2,7 +2,13 @@ import os
 import torch
 import torch.nn as nn
 
+
 class DINOv3Extractor(nn.Module):
+    """
+    Clean DINOv3 feature extractor.
+    Returns patch-level feature maps (B, C, Hf, Wf).
+    """
+
     def __init__(
         self,
         repo_dir: str,
@@ -12,69 +18,61 @@ class DINOv3Extractor(nn.Module):
     ):
         super().__init__()
 
-        if weights is None or not os.path.isfile(weights):
+        if not os.path.isfile(weights):
             raise FileNotFoundError(f"Weights not found: {weights}")
 
         self.device = torch.device(device if torch.cuda.is_available() else "cpu")
 
-        # IMPORTANT: torch.hub needs an absolute path often works better on Windows
         repo_dir = os.path.abspath(repo_dir)
+        weights = os.path.abspath(weights)
 
+        # Load model from local hub
         self.model = torch.hub.load(
             repo_dir,
             model_name,
             source="local",
-            weights=weights,   # DINOv3 hubconf.py expects this
-        ).to(self.device).eval()
+            weights=weights,
+        ).to(self.device)
 
-        self.patch_size = getattr(self.model, "patch_size", 16)
-        self.embed_dim = getattr(self.model, "embed_dim", None)
+        self.model.eval()
 
-        if self.embed_dim is None:
-            # fallback: infer from a dummy forward if needed
-            with torch.no_grad():
-                dummy = torch.zeros(1, 3, 224, 224, device=self.device)
-                toks = self.model(dummy)  # (1, 1+N, C)
-                self.embed_dim = toks.shape[-1]
+        # DINOv3 ViT-S/16 defaults
+        self.patch_size = 16
+        self.embed_dim = 384
 
-        print(f"✅ DINOv3 loaded: {model_name} (patch={self.patch_size}, dim={self.embed_dim})")
+    @torch.no_grad()
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        x: (B, 3, H, W)
+        returns: (B, C, Hf, Wf)
+        """
+        x = x.to(self.device)
+        B, _, H, W = x.shape
 
-@torch.no_grad()
-def forward(self, x: torch.Tensor) -> torch.Tensor:
-    """
-    x: (B, 3, H, W)
-    returns: (B, C, H_patch, W_patch)
-    """
-    x = x.to(self.device)
-    B, _, H, W = x.shape
+        # Forward → patch tokens
+        tokens = self.model(x)
 
-    tokens = self.model(x)
+        # Expected shape: (B, N, C)
+        if tokens.dim() != 3:
+            raise RuntimeError(
+                f"DINOv3 returned invalid shape {tokens.shape}. "
+                "Expected (B, N, C) patch tokens."
+            )
 
-    # --------------------------------------------------
-    # Normalizza output DINOv3
-    # --------------------------------------------------
-    if tokens.dim() == 2:
-        # (N, C) → aggiungi batch
-        tokens = tokens.unsqueeze(0)
+        h_patches = H // self.patch_size
+        w_patches = W // self.patch_size
+        expected_patches = h_patches * w_patches
 
-    # ora tokens è (B, N, C) oppure (B, 1+N, C)
-    if tokens.shape[1] == 1 + (H // self.patch_size) * (W // self.patch_size):
-        # ha CLS → rimuovilo
-        patch_tokens = tokens[:, 1:, :]
-    else:
-        # niente CLS → sono già patch tokens
-        patch_tokens = tokens
+        if tokens.shape[1] != expected_patches:
+            raise RuntimeError(
+                f"Patch count mismatch: got {tokens.shape[1]}, "
+                f"expected {expected_patches}"
+            )
 
-    B, N, C = patch_tokens.shape
+        feats = (
+            tokens
+            .transpose(1, 2)
+            .reshape(B, self.embed_dim, h_patches, w_patches)
+        )
 
-    h_patches = H // self.patch_size
-    w_patches = W // self.patch_size
-    assert h_patches * w_patches == N, f"Patch count mismatch: {N}"
-
-    patch_tokens = (
-        patch_tokens
-        .transpose(1, 2)
-        .reshape(B, C, h_patches, w_patches)
-    )
-
-    return patch_tokens
+        return feats
