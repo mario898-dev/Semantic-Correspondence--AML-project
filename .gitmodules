@@ -4,3 +4,6 @@
 [submodule "external/dinov3"]
 	path = external/dinov3
 	url = https://github.com/facebookresearch/dinov3.git
+[submodule "dinov3"]
+	path = external/dinov3
+	url = https://github.com/facebookresearch/dinov3.git
