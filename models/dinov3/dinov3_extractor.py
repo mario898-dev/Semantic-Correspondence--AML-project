@@ -8,60 +8,64 @@ class DINOv3Extractor(nn.Module):
         super().__init__()
         self.device = device
         
-        # 1. Aggiungiamo la root del modulo (external/dinov3) al path
+        # 1. Setup path per importare il modulo dinov3 locale
         abs_repo_dir = os.path.abspath(repo_dir)
         if abs_repo_dir not in sys.path:
             sys.path.insert(0, abs_repo_dir)
         
-        # 2. Importiamo il costruttore dal tuo file vision_transformer.py
         try:
             from dinov3.models import vision_transformer as vits
         except ImportError as e:
-            raise ImportError(f"Assicurati che {abs_repo_dir} contenga la cartella 'dinov3'. Errore: {e}")
+            raise ImportError(f"Controlla che {abs_repo_dir} contenga la cartella 'dinov3'. Errore: {e}")
 
-        # 3. Inizializzazione basata sulle funzioni factory del file
-        # Usiamo n_storage_tokens=4 (standard DINOv3 per i registri)
+        # 2. Configurazione per matchare i pesi ufficiali di Meta
+        # Questi parametri attivano le componenti che causavano l'errore 'Unexpected key'
+        meta_config = {
+            "n_storage_tokens": 4,    # I 4 registri di DINOv3
+            "layerscale_init": 1e-5,  # Crea i parametri 'gamma' (ls1, ls2)
+            "mask_k_bias": True,      # Crea i parametri 'bias_mask'
+        }
+
+        # 3. Inizializzazione modello
         if "vits16" in model_name:
-            self.model = vits.vit_small(patch_size=16, n_storage_tokens=4)
+            self.model = vits.vit_small(patch_size=16, **meta_config)
         elif "vitb14" in model_name:
-            self.model = vits.vit_base(patch_size=14, n_storage_tokens=4)
+            self.model = vits.vit_base(patch_size=14, **meta_config)
         else:
-            raise ValueError(f"Configurazione non trovata per {model_name}")
+            raise ValueError(f"Modello {model_name} non supportato.")
 
-        # 4. Caricamento pesi
+        # 4. Caricamento pesi con gestione del dizionario Meta
         if os.path.exists(weights):
             checkpoint = torch.load(weights, map_location='cpu')
-            # Il file sorgente suggerisce che i pesi siano sotto 'model'
-            state_dict = checkpoint.get("model", checkpoint)
+            
+            # I checkpoint di Meta sono spesso dizionari: {'model': ..., 'optimizer': ...}
+            if isinstance(checkpoint, dict) and "model" in checkpoint:
+                state_dict = checkpoint["model"]
+            else:
+                state_dict = checkpoint
+            
+            # Ora strict=True non darà più errore perché l'architettura è identica
             msg = self.model.load_state_dict(state_dict, strict=True)
-            print(f"✅ DINOv3: Pesi caricati correttamente ({msg})")
+            print(f"✅ DINOv3 caricato con successo: {msg}")
         else:
-            raise FileNotFoundError(f"Pesi non trovati in {weights}")
+            raise FileNotFoundError(f"Pesi non trovati: {weights}")
 
         self.model.to(device).eval()
-        
-        # Attributi per eval.py
         self.patch_size = self.model.patch_size
         self.embed_dim = self.model.embed_dim
 
     @torch.no_grad()
     def forward(self, x):
-        """
-        Input: (B, 3, H, W)
-        Output: (B, embed_dim, H/16, W/16)
-        """
         B, C, H, W = x.shape
         h_patches, w_patches = H // self.patch_size, W // self.patch_size
         
-        # forward_features nel tuo codice restituisce un Dict:
-        # { "x_norm_clstoken": ..., "x_storage_tokens": ..., "x_norm_patchtokens": ... }
+        # Estrazione feature tramite il dizionario restituito da Meta
         features = self.model.forward_features(x)
         
-        # Estraggono i patch tokens (già normalizzati con self.norm)
-        # Il codice sorgente li separa automaticamente tramite n_storage_tokens + 1
-        patch_features = features['x_norm_patchtokens'] # Shape: (B, N_patches, C)
+        # 'x_norm_patchtokens' contiene i token spaziali puliti (no CLS, no Registri)
+        patch_features = features['x_norm_patchtokens'] 
         
-        # Reshape spaziale per il matching
+        # Reshape: (B, N, C) -> (B, C, H_p, W_p)
         patch_features = patch_features.transpose(1, 2).reshape(B, self.embed_dim, h_patches, w_patches)
         
         return patch_features
