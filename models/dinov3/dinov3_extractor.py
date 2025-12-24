@@ -39,7 +39,7 @@ class DINOv3Extractor(nn.Module):
 
         print(f"✅ DINOv3 loaded: {model_name} (patch={self.patch_size}, dim={self.embed_dim})")
 
-    @torch.no_grad()
+@torch.no_grad()
 def forward(self, x: torch.Tensor) -> torch.Tensor:
     """
     x: (B, 3, H, W)
