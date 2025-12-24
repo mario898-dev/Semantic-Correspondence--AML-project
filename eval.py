@@ -41,6 +41,7 @@ def build_model(backbone: str, device: str):
 
     elif backbone == "sam_vitb":
         return SAMExtractor(
+            repo_dir="external/segment-anything",
             model_type="vit_b",
             device=device,
         )
