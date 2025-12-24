@@ -7,7 +7,7 @@ def parse_eval_args():
         "--backbone",
         type=str,
         required=True,
-        choices=["dinov2_vitb", "dinov2_vitl", "dinov3_vits","dinov3_vitb", "dinov3_vitl", "sam_vitb"],
+        choices=["dinov2_vitb14", "dinov2_vitl14", "dinov3_vits16","dinov3_vitb16", "dinov3_vitl16", "sam_vitb"],
     )
 
     parser.add_argument(
