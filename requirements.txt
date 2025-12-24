@@ -6,5 +6,4 @@ tqdm
 matplotlib
 pandas
 yacs
-segment_anything
 torchmetrics
