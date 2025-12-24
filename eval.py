@@ -19,7 +19,7 @@ from dataset.spair import SPairDataset
 
 from models.dinov2_extractor import DINOv2Extractor
 from models.SAM_extractor import SAMExtractor
-from models.dinov3_extractor import DINOv3Extractor
+from models.dinov3.dinov3_extractor import DINOv3Extractor
 from project_utils.matching import find_correspondences
 from project_utils.metrics import compute_pck_metrics
 from project_config import Config 
@@ -31,11 +31,11 @@ def build_model(backbone: str, device: str):
     elif backbone == "dinov2_vitl":
         return DINOv2Extractor("dinov2_vitl14", device)
 
-    elif backbone == "dinov3_vitb":
+    elif backbone == "dinov3_vits":
         return DINOv3Extractor(
             repo_dir="external/dinov3",
-            model_name="dinov3_vitb16",
-            weights="path/to/weights.pth",
+            model_name="dinov3_vits16",
+            weights="models\dinov3\weights\dinov3_vits16_pretrain_lvd1689m-08c60483.pth",
             device=device,
         )
 
