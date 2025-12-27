@@ -40,10 +40,10 @@ class SAMExtractor(nn.Module):
         #self.patch_size = self.model.image_encoder.patch_embed.proj.kernel_size[0]
         #self.embed_dim = self.model.image_encoder.embed_dim
 
-        print(
-            f"SAM caricato: {model_type} "
-            f"(patch_size={self.patch_size}, dim={self.embed_dim})"
-        )
+       #print(
+        #    f"SAM caricato: {model_type} "
+        #    f"(patch_size={self.patch_size}, dim={self.embed_dim})"
+        #)
 
     @torch.no_grad()
     def forward(self, x):
