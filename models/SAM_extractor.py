@@ -37,8 +37,8 @@ class SAMExtractor(nn.Module):
         self.model = sam.to(device).eval()
 
         # Metadata (per compatibilità pipeline)
-        self.patch_size = self.model.image_encoder.patch_embed.proj.kernel_size[0]
-        self.embed_dim = self.model.image_encoder.embed_dim
+        #self.patch_size = self.model.image_encoder.patch_embed.proj.kernel_size[0]
+        #self.embed_dim = self.model.image_encoder.embed_dim
 
         print(
             f"SAM caricato: {model_type} "
