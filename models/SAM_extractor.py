@@ -8,7 +8,7 @@ import torch.nn.functional as F
 class SAMExtractor(nn.Module):
     """
     SAM feature extractor compatibile con pipeline AML:
-    - Input:  (B, 3, H, W)  (tipicamente già ImageNet-normalized da SD4Match)
+    - Input:  (B, 3, H, W)  (spesso ImageNet-normalized da SD4Match)
     - Output: (B, C, Hf, Wf)
 
     Fix principali:
@@ -21,7 +21,7 @@ class SAMExtractor(nn.Module):
         super().__init__()
         self.device = device
 
-        # Path robusto verso il submodule segment-anything
+        # Path verso il submodule segment-anything
         abs_repo_dir = os.path.abspath(repo_dir)
         if abs_repo_dir not in sys.path:
             sys.path.insert(0, abs_repo_dir)
@@ -43,7 +43,7 @@ class SAMExtractor(nn.Module):
         sam = sam_model_registry[model_type](checkpoint=ckpt)
         self.model = sam.to(device).eval()
 
-        # Costanti per de-normalizzazione ImageNet (se l'input arriva già così)
+        # Costanti ImageNet (buffer)
         self.register_buffer("imagenet_mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
         self.register_buffer("imagenet_std",  torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
 
@@ -51,47 +51,32 @@ class SAMExtractor(nn.Module):
 
     @torch.no_grad()
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        x: (B,3,H,W) dal dataset (spesso ImageNet-normalized)
-        ritorna: (B,C,Hf,Wf)
-        """
         enc = self.model.image_encoder
 
-        # ---------------------------------------------------------
-        # 1) Porta l'input in un formato sensato per SAM
-        #    SD4Match spesso dà input ImageNet-normalized:
-        #    de-normalizzo -> [0,1] -> *255 -> normalizzazione SAM
-        # ---------------------------------------------------------
-        # euristica: se max > 2, è quasi certamente z-score (ImageNet norm)
+        # 1) Input preprocessing per SAM
+        # euristica: se max > 2 o min < -1 -> probabile ImageNet z-score
         if x.max() > 2.0 or x.min() < -1.0:
-            x01 = (x * self.imagenet_std + self.imagenet_mean).clamp(0.0, 1.0)
+            # FIX DEVICE: porta mean/std sul device di x
+            mean = self.imagenet_mean.to(x.device)
+            std = self.imagenet_std.to(x.device)
+            x01 = (x * std + mean).clamp(0.0, 1.0)
         else:
-            # se già in [0,1] (o simile), clamp e basta
             x01 = x.clamp(0.0, 1.0)
 
         x255 = x01 * 255.0
         x_sam = (x255 - self.model.pixel_mean) / self.model.pixel_std
 
-        # ---------------------------------------------------------
-        # 2) Fix pos_embed: SAM ViT ha pos_embed pretrainato per 1024
-        #    Se l'input è 512, griglia patch = 32 e va interpolata.
-        # ---------------------------------------------------------
-        # Patch stride (per vit_b è 16)
-        patch = enc.patch_embed.proj.stride[0]
+        # 2) Fix pos_embed alla griglia patch corrente
+        patch = enc.patch_embed.proj.stride[0]  # vit_b: 16
         hp, wp = x_sam.shape[-2] // patch, x_sam.shape[-1] // patch
 
-        pos = enc.pos_embed  # tipicamente (1, 64, 64, C)
+        pos = enc.pos_embed  # (1, H0, W0, C) tipicamente (1,64,64,C)
         if pos.shape[1] != hp or pos.shape[2] != wp:
-            # (1, H0, W0, C) -> (1, C, H0, W0)
-            pos_ = pos.permute(0, 3, 1, 2)
+            pos_ = pos.permute(0, 3, 1, 2)  # (1,C,H0,W0)
             pos_ = F.interpolate(pos_, size=(hp, wp), mode="bilinear", align_corners=False)
-            # (1, C, hp, wp) -> (1, hp, wp, C)
-            pos_ = pos_.permute(0, 2, 3, 1)
-            # aggiorno pos_embed in modo "frozen" (no grad)
+            pos_ = pos_.permute(0, 2, 3, 1)  # (1,hp,wp,C)
             enc.pos_embed = nn.Parameter(pos_, requires_grad=False)
 
-        # ---------------------------------------------------------
-        # 3) Forward encoder -> feature map
-        # ---------------------------------------------------------
+        # 3) Encoder features
         feats = enc(x_sam)  # (B, C, hp, wp)
         return feats
