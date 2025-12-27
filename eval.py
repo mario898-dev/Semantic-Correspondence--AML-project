@@ -35,7 +35,7 @@ def build_model(backbone: str, device: str):
         return DINOv3Extractor(
             repo_dir="external/dinov3",
             model_name="dinov3_vits16",
-            weights="models/dinov3/weights/dinov3_vits16_pretrain_lvd1689m-08c60483.pth",
+            weights="checkpoints/DINOv3/dinov3_vits16.pth",
             device=device,
         )
 
