@@ -117,6 +117,8 @@ def run_evaluation(args):
         src_img = batch["src_img"].unsqueeze(0).to(device)
         trg_img = batch["trg_img"].unsqueeze(0).to(device)
 
+        print(src_img.min(), src_img.max()) #debuggg
+
         src_kps = batch["src_kps"]        # (N, 2)
         trg_kps = batch["trg_kps"]        # (N, 2)
 
