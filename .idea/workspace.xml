@@ -4,13 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7eaf8db5-f350-4b45-b1c4-fd6cd70e8c2d" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/eval.py" beforeDir="false" afterPath="$PROJECT_DIR$/eval.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/SAM/SAM_extractor.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/SAM/SAM_extractor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/dinov2/dinov2_extractor.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/dinov2/dinov2_extractor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/dinov3/dinov3_extractor.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/dinov3/dinov3_extractor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/models_factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/models_factory.py" afterDir="false" />
-    </list>
+    <list default="true" id="7eaf8db5-f350-4b45-b1c4-fd6cd70e8c2d" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -36,6 +30,7 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.MCP Project settings loaded": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "main",
     "ignore.virus.scanning.warn.message": "true",
