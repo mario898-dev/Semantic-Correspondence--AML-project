@@ -38,23 +38,23 @@ class DINOv3Extractor(nn.Module):
         if os.path.exists(weights):
             checkpoint = torch.load(weights, map_location='cpu')
             
-            # I checkpoint di Meta sono spesso dizionari: {'model': ..., 'optimizer': ...}
+
             if isinstance(checkpoint, dict) and "model" in checkpoint:
                 state_dict = checkpoint["model"]
             else:
                 state_dict = checkpoint
             
-            # Ora strict=True non darà più errore perché l'architettura è identica
+
             msg = self.model.load_state_dict(state_dict, strict=True)
             print(f"✅ DINOv3 caricato con successo: {msg}")
         else:
             raise FileNotFoundError(f"Pesi non trovati: {weights}")
 
-        self.model.to(device).eval()
+        self.model.to(device)
         self.patch_size = self.model.patch_size
         self.embed_dim = self.model.embed_dim
 
-    @torch.no_grad()
+
     def forward(self, x):
         B, C, H, W = x.shape
         h_patches, w_patches = H // self.patch_size, W // self.patch_size
@@ -69,3 +69,15 @@ class DINOv3Extractor(nn.Module):
         patch_features = patch_features.transpose(1, 2).reshape(B, self.embed_dim, h_patches, w_patches)
         
         return patch_features
+
+    def setup_finetuning(self, num_layers):
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+        # In DINOv3, self.model è il ViT che ha l'attributo 'blocks'
+        total_blocks = len(self.model.blocks)
+        for i in range(total_blocks - num_layers, total_blocks):
+            for param in self.model.blocks[i].parameters():
+                param.requires_grad = True
+
+        print(f"{self.__class__.__name__}: Sbloccati gli ultimi {num_layers}/{total_blocks} blocchi.")

@@ -6,9 +6,7 @@ from collections import defaultdict
 import wandb
 from project_utils.cli import parse_eval_args
 
-# ============================================================
-# Path robusti (indipendenti dalla working directory)
-# ============================================================
+
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # --- SD4Match (submodule) ---
@@ -16,10 +14,6 @@ SD4MATCH_ROOT = os.path.join(REPO_ROOT, "external", "SD4Match")
 sys.path.insert(0, SD4MATCH_ROOT)
 
 from dataset.spair import SPairDataset
-
-from models.dinov2.dinov2_extractor import DINOv2Extractor
-from models.SAM.SAM_extractor import SAMExtractor
-from models.dinov3.dinov3_extractor import DINOv3Extractor
 from project_utils.matching import find_correspondences
 from project_utils.metrics import compute_pck_metrics
 from project_config import Config 
@@ -28,26 +22,25 @@ from models.models_factory import build_model
 
 def run_evaluation(args):
 
-    # ========================================================
-    # 1. SETUP DISPOSITIVO E MODELLO
-    # ========================================================
+    # SETUP DISPOSITIVO E MODELLO
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Utilizzando il dispositivo: {device}")
+    model = build_model(args.backbone, device, 0)
 
-    model = build_model(args.backbone, device)
+    # METTIAMO IL MODELLO IN MODALITA' valutazione
+    model.eval()
 
-    # ========================================================
-    # 2. CARICAMENTO DATASET (SD4Match)
-    # ========================================================
+    # CARICAMENTO DATASET (SD4Match)
     test_dataset = SPairDataset(
     cfg=Config,    # <--- La classe Config contiene DATASET.ROOT e DATASET.IMG_SIZE
     split="test",
     category=args.category
     )
 
-    # ========================================================
-    # 3. INIZIALIZZAZIONE METRICHE
-    # ========================================================
+
+    # INIZIALIZZAZIONE METRICHE
+
     alphas = Config.EVALUATOR.ALPHA
 
     correct_points = defaultdict(int)
@@ -66,9 +59,8 @@ def run_evaluation(args):
     print(f"VALUTAZIONE TRAINING-FREE su SPair-71k ({len(test_dataset)} pairs)")
     print(f"{'='*60}\n")
 
-    # ========================================================
+
     #   WANDB
-    # ========================================================
     if args.wandb:
         wandb.init(
             project="AML-Semantic-Correspondence",
@@ -83,9 +75,9 @@ def run_evaluation(args):
             }
         )
 
-    # ========================================================
+
     # 4. LOOP DI VALUTAZIONE
-    # ========================================================
+
     for idx in tqdm(range(len(test_dataset))):
 
         batch = test_dataset[idx]
@@ -100,7 +92,7 @@ def run_evaluation(args):
         img_size = Config.DATASET.IMG_SIZE
         pckthres = batch["pckthres"].item()
 
-        # ✅ keypoint validi solo se presenti in ENTRAMBI
+        # Keypoint validi
         valid_mask = (
             (src_kps[:, 0] >= 0) & (src_kps[:, 1] >= 0) &
             (trg_kps[:, 0] >= 0) & (trg_kps[:, 1] >= 0)
@@ -117,16 +109,15 @@ def run_evaluation(args):
 
         num_pairs_used += 1
 
-        # ----------------------------------------------------
+
         # Estrazione feature
-        # ----------------------------------------------------
+
         with torch.no_grad():
             src_feats = model(src_img)[0]  # (C, Hf, Wf)
             trg_feats = model(trg_img)[0]  # (C, Hf, Wf)
 
-        # ----------------------------------------------------
+
         # Corrispondenze
-        # ----------------------------------------------------
         pred_kps_valid = find_correspondences(
             src_feats,
             trg_feats,
@@ -134,9 +125,8 @@ def run_evaluation(args):
             img_size
         ).cpu()
 
-        # ----------------------------------------------------
+
         # Metriche
-        # ----------------------------------------------------
         for alpha in alphas:
             num_correct, num_total, pck_img = compute_pck_metrics(
                 pred_kps_valid,
@@ -155,9 +145,9 @@ def run_evaluation(args):
                 pck_images[alpha].append(pck_img)
                 pck_images_cat[category][alpha].append(pck_img)
 
-    # ========================================================
+
     # 5. RISULTATI FINALI
-    # ========================================================
+
     print(f"\n✅ Valutazione completata!")
     print(
         f"   Pair usati (>=1 kp valido): "

@@ -41,7 +41,7 @@ class SAMExtractor(nn.Module):
 
         # Init SAM
         sam = sam_model_registry[model_type](checkpoint=ckpt)
-        self.model = sam.to(device).eval()
+        self.model = sam.to(device)
 
         # Costanti ImageNet (buffer)
         self.register_buffer("imagenet_mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
@@ -49,7 +49,7 @@ class SAMExtractor(nn.Module):
 
         print(f"✅ SAM loaded: {model_type} (checkpoint: {os.path.basename(ckpt)})")
 
-    @torch.no_grad()
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         enc = self.model.image_encoder
 
@@ -80,3 +80,17 @@ class SAMExtractor(nn.Module):
         # 3) Encoder features
         feats = enc(x_sam)  # (B, C, hp, wp)
         return feats
+
+    def setup_finetuning(self, num_layers):
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+        # In SAM i blocchi del ViT sono in self.model.image_encoder.blocks
+        blocks = self.model.image_encoder.blocks
+        total_blocks = len(blocks)
+        for i in range(total_blocks - num_layers, total_blocks):
+            for param in blocks[i].parameters():
+                param.requires_grad = True
+
+        print(
+            f"{self.__class__.__name__}: Sbloccati gli ultimi {num_layers}/{total_blocks} blocchi dell'image_encoder.")
