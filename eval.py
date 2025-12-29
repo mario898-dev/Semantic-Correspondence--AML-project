@@ -17,38 +17,14 @@ sys.path.insert(0, SD4MATCH_ROOT)
 
 from dataset.spair import SPairDataset
 
-from models.dinov2_extractor import DINOv2Extractor
-from models.SAM_extractor import SAMExtractor
+from models.dinov2.dinov2_extractor import DINOv2Extractor
+from models.SAM.SAM_extractor import SAMExtractor
 from models.dinov3.dinov3_extractor import DINOv3Extractor
 from project_utils.matching import find_correspondences
 from project_utils.metrics import compute_pck_metrics
 from project_config import Config 
 
-def build_model(backbone: str, device: str):
-    if backbone == "dinov2_vitb14":
-        return DINOv2Extractor("dinov2_vitb14", device)
-
-    elif backbone == "dinov2_vitl14":
-        return DINOv2Extractor("dinov2_vitl14", device)
-
-    elif backbone == "dinov3_vits16":
-        return DINOv3Extractor(
-            repo_dir="external/dinov3",
-            model_name="dinov3_vits16",
-            weights="checkpoints/DINOv3/dinov3_vits16.pth",
-            device=device,
-        )
-
-    elif backbone == "sam_vitb":
-        return SAMExtractor(
-            repo_dir="external/segment-anything",
-            model_type="vit_b",
-            device=device,
-        )
-
-    else:
-        raise ValueError(f"Unknown backbone: {backbone}")
-
+from models.models_factory import build_model
 
 def run_evaluation(args):
 
@@ -116,8 +92,6 @@ def run_evaluation(args):
 
         src_img = batch["src_img"].unsqueeze(0).to(device)
         trg_img = batch["trg_img"].unsqueeze(0).to(device)
-
-        print(src_img.min(), src_img.max()) #debuggg
 
         src_kps = batch["src_kps"]        # (N, 2)
         trg_kps = batch["trg_kps"]        # (N, 2)
@@ -264,7 +238,4 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
-
-
-
 
