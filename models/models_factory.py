@@ -1,6 +1,6 @@
 import os
-from .dinov2_extractor import DINOv2Extractor
-from .SAM_extractor import SAMExtractor
+from .dinov2.dinov2_extractor import DINOv2Extractor
+from .SAM.SAM_extractor import SAMExtractor
 from .dinov3.dinov3_extractor import DINOv3Extractor
 
 def build_model(backbone: str, device: str):
