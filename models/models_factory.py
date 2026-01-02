@@ -6,7 +6,7 @@ from .dinov3.dinov3_extractor import DINOv3Extractor
 def build_model(backbone: str, device: str, num_trainable_layers:int =0):
     if backbone == "dinov2_vits14":
         model = DINOv2Extractor("dinov2_vits14", device)
-    if backbone == "dinov2_vitb14":
+    elif backbone == "dinov2_vitb14":
         model =  DINOv2Extractor("dinov2_vitb14", device)
 
     elif backbone == "dinov2_vitl14":
