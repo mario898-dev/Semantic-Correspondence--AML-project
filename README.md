@@ -14,10 +14,7 @@ cd Semantic-Correspondence--AML-project
 ```bash
 pip install -r requirements.txt
 ```
-Per SAM
-```bash
-python scripts/setup_sam.py
-```
+
 
 - Scarica SPair-71k nella cartella che usa SD4Match
 ```bash
@@ -35,3 +32,19 @@ cd ../../../
 L'argomento backbone è obbligatorio\
 L'argomento category se non specificato indica "all" categories\
 L'argomento Wandb va inserito solo se si vuole utilizzare wandb
+
+- Per training
+```bash
+!python train.py \
+  --backbone <BACKBONE_NAME> \
+  --category <CATEGORY|all> \
+  --trainable_layers <NUM_LAYERS> \
+  --batch_size <BATCH_SIZE> \
+  --epochs <NUM_EPOCHS> \
+  --lr <LEARNING_RATE> \
+  --sigma <SIGMA> \
+  --output_dir <OUTPUT_DIR> \
+  [--wandb] \
+  [--wandb_mode online|offline|disabled]
+
+```
