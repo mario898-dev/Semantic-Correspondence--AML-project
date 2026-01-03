@@ -44,7 +44,7 @@ def run_training(args):
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=4,
+        num_workers=2,
         collate_fn=None 
     )
     
@@ -164,4 +164,5 @@ def run_training(args):
 if __name__ == "__main__":
     args = parse_train_args()
     run_training(args)
+
 
