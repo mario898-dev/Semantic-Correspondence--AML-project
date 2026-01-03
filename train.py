@@ -34,7 +34,7 @@ def run_training(args):
     print(f"Caricamento SPair-71k (split: train, category: {args.category})...")
     train_dataset = SPairDataset(
         cfg=Config,
-        split="train",
+        split="trn",
         category=args.category
     )
     
@@ -164,3 +164,4 @@ def run_training(args):
 if __name__ == "__main__":
     args = parse_train_args()
     run_training(args)
+
