@@ -36,14 +36,14 @@ L'argomento Wandb va inserito solo se si vuole utilizzare wandb
 - Per training
 ```bash
 !python train.py \
-  --backbone <BACKBONE_NAME> \
-  --category <CATEGORY|all> \
-  --trainable_layers <NUM_LAYERS> \
-  --batch_size <BATCH_SIZE> \
-  --epochs <NUM_EPOCHS> \
-  --lr <LEARNING_RATE> \
-  --sigma <SIGMA> \
-  --output_dir <OUTPUT_DIR> \
+  --backbone [BACKBONE_NAME] \
+  --category [CATEGORY|all] \
+  --trainable_layers [NUM_LAYERS] \
+  --batch_size [BATCH_SIZE] \
+  --epochs [NUM_EPOCHS] \
+  --lr [LEARNING_RATE] \
+  --sigma [SIGMA] \
+  --output_dir [OUTPUT_DIR] \
   [--wandb] \
   [--wandb_mode online|offline|disabled]
 
