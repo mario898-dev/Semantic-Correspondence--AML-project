@@ -4,41 +4,34 @@ import torch
 from tqdm import tqdm
 from collections import defaultdict
 import wandb
+
 from utils.cli import parse_eval_args
+from dataset.spair import SPairDataset
+from utils.matching import find_correspondences
+from utils.metrics import compute_pck_metrics
+from project_config import Config
+from models.models_factory import build_model
 
 
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
-
-from dataset.spair import SPairDataset
-from utils.matching import find_correspondences
-from utils.metrics import compute_pck_metrics
-from project_config import Config 
-
-from models.models_factory import build_model
-
 def run_evaluation(args):
-
-    # SETUP DISPOSITIVO E MODELLO
-
+    # --- SETUP DISPOSITIVO E MODELLO ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Utilizzando il dispositivo: {device}")
-    model = build_model(args.backbone, device, 0)
 
-    # METTIAMO IL MODELLO IN MODALITA' valutazione
+    model = build_model(args.backbone, device, 0)
     model.eval()
 
-    # CARICAMENTO DATASET (SD4Match)
+    # --- DATASET ---
     test_dataset = SPairDataset(
-    cfg=Config,    # <--- La classe Config contiene DATASET.ROOT e DATASET.IMG_SIZE
-    split="test",
-    category=args.category
+        cfg=Config,
+        split="test",
+        category=args.category
     )
 
-
-    # INIZIALIZZAZIONE METRICHE
-
+    # --- METRICHE ---
     alphas = Config.EVALUATOR.ALPHA
 
     correct_points = defaultdict(int)
@@ -46,8 +39,8 @@ def run_evaluation(args):
     pck_images = defaultdict(list)
 
     correct_points_cat = defaultdict(lambda: defaultdict(int))
-    total_points_cat   = defaultdict(lambda: defaultdict(int))
-    pck_images_cat     = defaultdict(lambda: defaultdict(list))
+    total_points_cat = defaultdict(lambda: defaultdict(int))
+    pck_images_cat = defaultdict(lambda: defaultdict(list))
 
     total_keypoints_valid = 0
     total_keypoints_all = 0
@@ -57,8 +50,7 @@ def run_evaluation(args):
     print(f"VALUTAZIONE TRAINING-FREE su SPair-71k ({len(test_dataset)} pairs)")
     print(f"{'='*60}\n")
 
-
-    #   WANDB
+    # --- WANDB INIT (solo se attivo) ---
     if args.wandb:
         wandb.init(
             project="AML-Semantic-Correspondence",
@@ -70,24 +62,20 @@ def run_evaluation(args):
                 "dataset": "SPair-71k",
                 "mode": "training-free",
                 "pck_thresholds": Config.EVALUATOR.ALPHA,
-            }
+            },
         )
 
-
-    # 4. LOOP DI VALUTAZIONE
-
+    # --- LOOP DI VALUTAZIONE ---
     for idx in tqdm(range(len(test_dataset))):
-
         batch = test_dataset[idx]
 
-        src_img = batch["src_img"].unsqueeze(0).to(device)
+        src_img = batch["src_img"].unsqueeze(0).to(device)  # (1,3,H,W)
         trg_img = batch["trg_img"].unsqueeze(0).to(device)
 
-        src_kps = batch["src_kps"]        # (N, 2)
-        trg_kps = batch["trg_kps"]        # (N, 2)
+        src_kps = batch["src_kps"]  # (N, 2)
+        trg_kps = batch["trg_kps"]  # (N, 2)
 
-        category = batch.get("category", "all") #batch[category]
-        
+        category = batch.get("category", "all")
         pckthres = batch["pckthres"].item()
 
         # Keypoint validi
@@ -95,7 +83,6 @@ def run_evaluation(args):
             (src_kps[:, 0] >= 0) & (src_kps[:, 1] >= 0) &
             (trg_kps[:, 0] >= 0) & (trg_kps[:, 1] >= 0)
         )
-
         src_kps_valid = src_kps[valid_mask]
         trg_kps_valid = trg_kps[valid_mask]
 
@@ -107,20 +94,22 @@ def run_evaluation(args):
 
         num_pairs_used += 1
 
-
         # Estrazione feature
-
         with torch.no_grad():
             src_feats = model(src_img)[0]  # (C, Hf, Wf)
             trg_feats = model(trg_img)[0]  # (C, Hf, Wf)
 
+        # Dimensioni reali immagine (coerenti con i keypoint del dataset)
+        img_h, img_w = src_img.shape[-2:]
 
-      img_h, img_w = src_img.shape[-2:]  # dimensioni reali dell'immagine nel dataset
-
-    pred_kps_valid = find_correspondences(
-        src_feats, trg_feats, src_kps_valid.to(device), img_h, img_w
-    ).cpu()
-
+        # Corrispondenze
+        pred_kps_valid = find_correspondences(
+            src_feats,
+            trg_feats,
+            src_kps_valid.to(device),
+            img_h,
+            img_w,
+        ).cpu()
 
         # Metriche
         for alpha in alphas:
@@ -141,32 +130,24 @@ def run_evaluation(args):
                 pck_images[alpha].append(pck_img)
                 pck_images_cat[category][alpha].append(pck_img)
 
-
-    # 5. RISULTATI FINALI
-
+    # --- RISULTATI FINALI ---
     print(f"\n✅ Valutazione completata!")
+    print(f"   Pair usati (>=1 kp valido): {num_pairs_used} / {len(test_dataset)}")
     print(
-        f"   Pair usati (>=1 kp valido): "
-        f"{num_pairs_used} / {len(test_dataset)}"
-    )
-    print(
-        f"   Keypoint validi: {total_keypoints_valid} / "
-        f"{total_keypoints_all} "
+        f"   Keypoint validi: {total_keypoints_valid} / {total_keypoints_all} "
         f"({100 * total_keypoints_valid / total_keypoints_all:.1f}%)"
     )
 
     pck_per_point = {
-        a: (100.0 * correct_points[a] / total_points[a])
-        if total_points[a] > 0 else 0.0
+        a: (100.0 * correct_points[a] / total_points[a]) if total_points[a] > 0 else 0.0
         for a in alphas
     }
 
     pck_per_image = {
-        a: (sum(pck_images[a]) / len(pck_images[a]))
-        if len(pck_images[a]) > 0 else 0.0
+        a: (sum(pck_images[a]) / len(pck_images[a])) if len(pck_images[a]) > 0 else 0.0
         for a in alphas
     }
-    
+
     print("\n--- PCK (dataset) ---")
     for a in alphas:
         print(
@@ -174,10 +155,12 @@ def run_evaluation(args):
             f"per-point: {pck_per_point[a]:6.2f}%   "
             f"per-image: {pck_per_image[a]:6.2f}%"
         )
-    if args.wandb:
-        wandb.log({f"PCK@{a:.2f}_per_point": pck_per_point[a] for a in alphas})
-        wandb.log({f"PCK@{a:.2f}_per_image": pck_per_image[a] for a in alphas})
 
+    # --- PCK (per category): stampa sempre, wandb solo se attivo ---
+    print("\n--- PCK (per category) ---")
+
+    cat_table = None
+    if args.wandb:
         cat_table = wandb.Table(
             columns=[
                 "category",
@@ -186,43 +169,39 @@ def run_evaluation(args):
             ]
         )
 
-    print("\n--- PCK (per category) ---")
     for cat in sorted(pck_images_cat.keys()):
-        # per-point e per-image numerici (non stringhe)
         pp_vals = []
         pi_vals = []
         for a in alphas:
             pp = (
-                100.0 * correct_points_cat[cat][a] /
-                total_points_cat[cat][a]
+                100.0 * correct_points_cat[cat][a] / total_points_cat[cat][a]
             ) if total_points_cat[cat][a] > 0 else 0.0
 
             pi = (
-                sum(pck_images_cat[cat][a]) /
-                len(pck_images_cat[cat][a])
+                sum(pck_images_cat[cat][a]) / len(pck_images_cat[cat][a])
             ) if len(pck_images_cat[cat][a]) > 0 else 0.0
 
             pp_vals.append(pp)
             pi_vals.append(pi)
 
-        cat_table.add_data(cat, *pp_vals, *pi_vals)
+        # stampa sempre
+        pretty = [f"{cat:>15}"]
+        for i, a in enumerate(alphas):
+            pretty.append(f"PCK@{a:.2f} pp {pp_vals[i]:6.2f}% | pi {pi_vals[i]:6.2f}%")
+        print("   ".join(pretty))
 
-    #    # print come prima
-    #    pretty = [f"{cat:>15}"]
-    #    for i, a in enumerate(alphas):
-    #        pretty.append(f"PCK@{a:.2f} pp {pp_vals[i]:6.2f}% | pi {pi_vals[i]:6.2f}%")
-    #    print("   ".join(pretty))
+        # tabella wandb solo se attivo
+        if args.wandb:
+            cat_table.add_data(cat, *pp_vals, *pi_vals)
 
-    #    # log tabella
-    #    cat_table.add_data(cat, *pp_vals, *pi_vals)
-
-    wandb.log({"PCK_per_category": cat_table})
-
-    wandb.finish()
+    # --- WANDB LOG (solo se attivo) ---
+    if args.wandb:
+        wandb.log({f"PCK@{a:.2f}_per_point": pck_per_point[a] for a in alphas})
+        wandb.log({f"PCK@{a:.2f}_per_image": pck_per_image[a] for a in alphas})
+        wandb.log({"PCK_per_category": cat_table})
+        wandb.finish()
 
 
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
-
-
