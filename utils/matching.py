@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-def compute_similarity_logits(src_feats, trg_feats, src_kps_px, img_size):
+def compute_similarity_logits(src_feats, trg_feats, src_kps_px, img_h, img_w):
     """
     Parte differenziabile: Calcola la matrice di similarità coseno.
     Utilizzabile sia in Training (con Softmax/Loss) che in Inference (con Argmax).
@@ -27,8 +27,8 @@ def compute_similarity_logits(src_feats, trg_feats, src_kps_px, img_size):
     trg_feats = F.normalize(trg_feats, dim=0)
 
     # Stride (necessario per mappare pixel -> feature grid)
-    stride_x = img_size / Wf
-    stride_y = img_size / Hf
+    stride_x = img_w / Wf
+    stride_y = img_h / Hf
 
     # 2) Pixel -> feature-grid coords per grid_sample (range [-1, 1])
     # Patch center convention: pixel = (idx + 0.5) * stride
