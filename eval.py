@@ -87,7 +87,7 @@ def run_evaluation(args):
         trg_kps = batch["trg_kps"]        # (N, 2)
 
         category = batch.get("category", "all") #batch[category]
-        img_size = Config.DATASET.IMG_SIZE
+        
         pckthres = batch["pckthres"].item()
 
         # Keypoint validi
@@ -115,13 +115,11 @@ def run_evaluation(args):
             trg_feats = model(trg_img)[0]  # (C, Hf, Wf)
 
 
-        # Corrispondenze
-        pred_kps_valid = find_correspondences(
-            src_feats,
-            trg_feats,
-            src_kps_valid.to(device),
-            img_size
-        ).cpu()
+      img_h, img_w = src_img.shape[-2:]  # dimensioni reali dell'immagine nel dataset
+
+    pred_kps_valid = find_correspondences(
+        src_feats, trg_feats, src_kps_valid.to(device), img_h, img_w
+    ).cpu()
 
 
         # Metriche
@@ -226,4 +224,5 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
