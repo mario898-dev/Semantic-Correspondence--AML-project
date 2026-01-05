@@ -4,18 +4,16 @@ import torch
 from tqdm import tqdm
 from collections import defaultdict
 import wandb
-from project_utils.cli import parse_eval_args
+from utils.cli import parse_eval_args
 
 
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-# --- SD4Match (submodule) ---
-SD4MATCH_ROOT = os.path.join(REPO_ROOT, "external", "SD4Match")
-sys.path.insert(0, SD4MATCH_ROOT)
+
 
 from dataset.spair import SPairDataset
-from project_utils.matching import find_correspondences
-from project_utils.metrics import compute_pck_metrics
+from utils.matching import find_correspondences
+from utils.metrics import compute_pck_metrics
 from project_config import Config 
 
 from models.models_factory import build_model

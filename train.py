@@ -14,9 +14,9 @@ sys.path.insert(0, SD4MATCH_ROOT)
 from project_config import Config
 from dataset.spair import SPairDataset
 from models.models_factory import build_model
-from project_utils.cli import parse_train_args
-from project_utils.matching import compute_similarity_logits
-from project_utils.loss import WindowSoftTargetLoss
+from utils.cli import parse_train_args
+from utils.matching import compute_similarity_logits
+from utils.loss import WindowSoftTargetLoss
 
 def run_training(args):
     # 1. Setup Dispositivo e Modello
