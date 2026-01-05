@@ -90,8 +90,8 @@ def find_correspondences(src_feats, trg_feats, src_kps_px, img_h, img_w):
         return torch.empty((0, 2), device=device)
         
     _, Hf, Wf = trg_feats.shape
-    stride_x = img_size / Wf
-    stride_y = img_size / Hf
+    stride_x = img_w / Wf
+    stride_y = img_h / Hf
 
     # --- 2. Parte Specifica Inference (Argmax) ---
     max_idx = sim.argmax(dim=1)
@@ -103,7 +103,7 @@ def find_correspondences(src_feats, trg_feats, src_kps_px, img_h, img_w):
     pred_x_px = (pred_x + 0.5) * stride_x
     pred_y_px = (pred_y + 0.5) * stride_y
 
-    pred_x_px = pred_x_px.clamp(0, img_size - 1)
-    pred_y_px = pred_y_px.clamp(0, img_size - 1)
+    pred_x_px = pred_x_px.clamp(0, img_w - 1)
+    pred_y_px = pred_y_px.clamp(0, img_h - 1)
 
     return torch.stack([pred_x_px, pred_y_px], dim=1)
