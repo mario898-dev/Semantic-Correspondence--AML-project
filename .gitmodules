@@ -1,6 +1,3 @@
-[submodule "external/SD4Match"]
-	path = external/SD4Match
-	url = https://github.com/ActiveVisionLab/SD4Match.git
 [submodule "external/dinov3"]
 	path = external/dinov3
 	url = https://github.com/facebookresearch/dinov3.git
