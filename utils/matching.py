@@ -48,7 +48,8 @@ def compute_similarity_logits(src_feats, trg_feats, src_kps_px, img_h, img_w):
         src_feats.unsqueeze(0), 
         grid, 
         mode="bilinear", 
-        align_corners=True
+        align_corners=True,
+        padding_mode="border"
     ) # Output: (1, C, Nv, 1)
 
     src_vecs = src_vecs.squeeze(0).squeeze(-1).T  # (Nv, C)
@@ -66,7 +67,7 @@ def compute_similarity_logits(src_feats, trg_feats, src_kps_px, img_h, img_w):
     return sim
 
 
-def find_correspondences(src_feats, trg_feats, src_kps_px, img_size):
+def find_correspondences(src_feats, trg_feats, src_kps_px, img_h, img_w):
     """
     Wrapper per l'INFERENZA (Test/Validation).
     Chiama la logica condivisa e applica l'argmax (non differenziabile).
@@ -81,7 +82,7 @@ def find_correspondences(src_feats, trg_feats, src_kps_px, img_size):
         pred_kps_px: (Nv, 2) predicted target keypoints in pixel coords
     """
     # --- 1. Parte Condivisa (Differenziabile) ---
-    sim = compute_similarity_logits(src_feats, trg_feats, src_kps_px, img_size)
+    sim = compute_similarity_logits(src_feats, trg_feats, src_kps_px, img_h, img_w)
     
     device = src_feats.device
     Nv = sim.shape[0]
