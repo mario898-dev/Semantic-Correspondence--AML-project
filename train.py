@@ -7,16 +7,13 @@ from torch.utils.data import DataLoader
 
 # --- Setup Path ---
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
-SD4MATCH_ROOT = os.path.join(REPO_ROOT, "external", "SD4Match")
-sys.path.insert(0, SD4MATCH_ROOT)
 
-# Imports del progetto
 from project_config import Config
 from dataset.spair import SPairDataset
 from models.models_factory import build_model
 from utils.cli import parse_train_args
 from utils.matching import compute_similarity_logits
-from utils.loss import WindowSoftTargetLoss
+from utils.loss import GaussianCrossEntropyLoss
 
 def run_training(args):
     # 1. Setup Dispositivo e Modello
@@ -55,7 +52,7 @@ def run_training(args):
     params_to_optimize = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.AdamW(params_to_optimize, lr=args.lr)
     
-    criterion = WindowSoftTargetLoss(sigma=args.sigma, temperature=0.1)
+    criterion = GaussianCrossEntropyLoss()
     
     print(f"Parametri da ottimizzare: {len(params_to_optimize)} tensor(s).")
 
@@ -164,5 +161,6 @@ def run_training(args):
 if __name__ == "__main__":
     args = parse_train_args()
     run_training(args)
+
 
 
