@@ -13,7 +13,7 @@ from dataset.spair import SPairDataset
 from models.models_factory import build_model
 from utils.cli import parse_train_args
 from utils.matching import compute_similarity_logits
-from utils.loss import GaussianCrossEntropyLoss
+from utils.loss import FeatMapLoss
 
 def run_training(args):
     # 1. Setup Dispositivo e Modello
@@ -52,7 +52,7 @@ def run_training(args):
     params_to_optimize = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.AdamW(params_to_optimize, lr=args.lr)
     
-    criterion = GaussianCrossEntropyLoss()
+    criterion = FeatMapLoss()
     
     print(f"Parametri da ottimizzare: {len(params_to_optimize)} tensor(s).")
 
@@ -87,21 +87,16 @@ def run_training(args):
             src_kps = batch["src_kps"].to(device)
             trg_kps = batch["trg_kps"].to(device)
 
-            # Se batch_size=1, rimuoviamo la dimensione batch extra dai keypoints se necessario
-            if src_kps.dim() == 3 and src_kps.shape[0] == 1:
-                src_kps = src_kps.squeeze(0)
-                trg_kps = trg_kps.squeeze(0)
-            
             # Filtro keypoint validi (coordinate >= 0)
             valid_mask = (
                 (src_kps[:, 0] >= 0) & (src_kps[:, 1] >= 0) &
                 (trg_kps[:, 0] >= 0) & (trg_kps[:, 1] >= 0)
             )
-            src_kps_valid = src_kps[valid_mask]
-            trg_kps_valid = trg_kps[valid_mask]
 
-            # Se non ci sono keypoint validi in questa coppia, saltiamo
-            if len(src_kps_valid) == 0:
+            npts = valid_mask.sum(dim=1) # (B,) tensore con il numero di punti validi per immagine
+
+            # Se nessun punto è valido nel batch, saltiamo
+            if npts.sum() == 0:
                 continue
 
             # --- Forward Pass ---
@@ -111,25 +106,30 @@ def run_training(args):
             src_feats = model(src_img)[0]
             trg_feats = model(trg_img)[0]
             
-            # Rimuovi dimensione batch dalle features se presente (B=1 -> C,H,W)
-            if src_feats.dim() == 4:
-                src_feats = src_feats.squeeze(0)
-                trg_feats = trg_feats.squeeze(0)
-
-            # Calcolo logits di similarità (differenziabile)
-            # sim_logits: (N_kps_valid, Hf*Wf)
-            sim_logits = compute_similarity_logits(
-                src_feats,
-                trg_feats,
-                src_kps_valid,
-                img_size
-            )
-
             # --- Calcolo Loss ---
-            # Passiamo le dimensioni della feature map per mappare i pixel GT sulla griglia
-            feature_shape = src_feats.shape[-2:] # (Hf, Wf)
-            loss = criterion(sim_logits, trg_kps_valid, img_size, feature_shape)
+            # Recuperiamo dimensioni originali immagini per la normalizzazione interna alla loss
+            src_h, src_w = src_img.shape[-2:]
+            trg_h, trg_w = trg_img.shape[-2:]
 
+            loss = criterion(
+                src_featmaps=src_feats,
+                trg_featmaps=trg_feats,
+                src_kps=src_kps,           # Passiamo i tensori completi (B, N, 2)
+                trg_kps=trg_kps,
+                src_imgsize=(src_h, src_w), # Dimensioni reali immagine
+                trg_imgsize=(trg_h, trg_w),
+                npts=npts,                  # Numero punti validi per item
+                softmax_temp=0.1,           # Temperatura
+                enable_l2_norm=True
+            )
+            
+            # Check NaN
+            if torch.isnan(loss):
+                print("Loss is NaN!")
+                continue
+
+            
+            
             # --- Backward & Step ---
             loss.backward()
             optimizer.step()
@@ -161,6 +161,7 @@ def run_training(args):
 if __name__ == "__main__":
     args = parse_train_args()
     run_training(args)
+
 
 
 
