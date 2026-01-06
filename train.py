@@ -102,9 +102,14 @@ def run_training(args):
             # --- Forward Pass ---
             optimizer.zero_grad()
             
-            # Estrazione feature (nota: model(...) ritorna lista/tupla, prendiamo [0])
-            src_feats = model(src_img)[0]
-            trg_feats = model(trg_img)[0]
+            # Estrazione feature
+            out_src = model(src_img)
+            out_trg = model(trg_img)
+            
+            # Gestione robusta: se è una tupla prendi il primo elemento, altrimenti tieni il tensore
+            src_feats = out_src[0] if isinstance(out_src, (tuple, list)) else out_src
+            trg_feats = out_trg[0] if isinstance(out_trg, (tuple, list)) else out_trg
+            
             
             # --- Calcolo Loss ---
             # Recuperiamo dimensioni originali immagini per la normalizzazione interna alla loss
@@ -161,6 +166,7 @@ def run_training(args):
 if __name__ == "__main__":
     args = parse_train_args()
     run_training(args)
+
 
 
 
