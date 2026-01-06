@@ -15,7 +15,7 @@ def L2normalization(feat, dim):
 
     return feat / (torch.norm(feat, dim=dim, keepdim=True) + 1e-6)
 
-class GaussianCrossEntropyLoss:     # Change the name to FeatMapLoss
+class FeatMapLoss:     # Change the name to FeatMapLoss
 
     def __init__(self):
         pass
