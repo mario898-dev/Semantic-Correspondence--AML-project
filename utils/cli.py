@@ -124,4 +124,13 @@ def parse_train_args():
         help="Modalità WandB"
     )
 
+    parser.add_argument("--resume", type=str, default=None,
+                    help="Path a un checkpoint .pth (es. .../last.pth) per riprendere il training")
+    
+    parser.add_argument("--wandb_run_id", type=str, default=None,
+                    help="(Opzionale) Forza un run id wandb. Se non dato, viene salvato/riusato dal checkpoint.")
+    
+    parser.add_argument("--wandb_artifacts", action="store_true",
+                    help="Se attivo, carica last/best checkpoint come wandb Artifacts (utile su Colab)")
+
     return parser.parse_args()
