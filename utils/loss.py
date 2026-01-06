@@ -107,7 +107,7 @@ class FeatMapLoss:     # Change the name to FeatMapLoss
             kx = torch.linspace(-ind, ind, size).to(_device)
             ky = torch.linspace(-ind, ind, size).to(_device)
 
-            ky, kx = torch.meshgrid(ky, kx)
+            ky, kx = torch.meshgrid(ky, kx, indexing="ij")
             kernel = torch.sqrt(kx**2 + ky**2)
 
             mu, sigma = 0, ind/2
