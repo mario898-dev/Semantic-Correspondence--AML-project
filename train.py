@@ -23,12 +23,15 @@ from utils.loss import FeatMapLoss
 # Checkpoint utilities
 # -------------------------
 def _get_rng_state():
-    return {
+    state = {
         "python": random.getstate(),
         "numpy": np.random.get_state(),
         "torch": torch.get_rng_state(),
-        "cuda": torch.get_rng_state_all() if torch.cuda.is_available() else None,
+        "cuda": None,
     }
+    if torch.cuda.is_available() and hasattr(torch.cuda, "get_rng_state_all"):
+        state["cuda"] = torch.cuda.get_rng_state_all()
+    return state
 
 
 def _set_rng_state(state):
@@ -36,10 +39,11 @@ def _set_rng_state(state):
         random.setstate(state["python"])
         np.random.set_state(state["numpy"])
         torch.set_rng_state(state["torch"])
-        if torch.cuda.is_available() and state.get("cuda") is not None:
+        if torch.cuda.is_available() and state.get("cuda") is not None and hasattr(torch.cuda, "set_rng_state_all"):
             torch.cuda.set_rng_state_all(state["cuda"])
     except Exception as e:
         print(f" Impossibile ripristinare RNG state in modo completo: {e}")
+
 
 
 def _optimizer_to(optimizer, device):
