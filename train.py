@@ -1,6 +1,8 @@
 import os
 import sys
 import random
+import subprocess
+import shutil
 import numpy as np
 import torch
 import wandb
@@ -25,7 +27,7 @@ def _get_rng_state():
         "python": random.getstate(),
         "numpy": np.random.get_state(),
         "torch": torch.get_rng_state(),
-        "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+        "cuda": torch.get_rng_state_all() if torch.cuda.is_available() else None,
     }
 
 
@@ -49,6 +51,10 @@ def _optimizer_to(optimizer, device):
 
 
 def save_checkpoint(path, model, optimizer, epoch, global_step, best_loss, wandb_run_id, args_dict):
+    """
+    Salvataggio atomico: scrive su .tmp e poi fa os.replace.
+    Riduce il rischio di file corrotti/parziali (utile anche per copy su Drive).
+    """
     os.makedirs(os.path.dirname(path), exist_ok=True)
     ckpt = {
         "epoch": epoch,
@@ -60,7 +66,9 @@ def save_checkpoint(path, model, optimizer, epoch, global_step, best_loss, wandb
         "wandb_run_id": wandb_run_id,
         "args": args_dict,
     }
-    torch.save(ckpt, path)
+    tmp_path = path + ".tmp"
+    torch.save(ckpt, tmp_path)
+    os.replace(tmp_path, path)
 
 
 def load_checkpoint(path, model, optimizer, device, strict=True, load_rng=True):
@@ -82,6 +90,46 @@ def load_checkpoint(path, model, optimizer, device, strict=True, load_rng=True):
         "unexpected_keys": unexpected,
     }
     return info
+
+
+# -------------------------
+# Drive sync utilities
+# -------------------------
+def sync_checkpoints_to_drive(run_dir: str, drive_run_dir: str):
+    """
+    Copia solo last.pth e best.pth su Drive a fine epoca.
+    - Usa rsync se disponibile (incrementale).
+    - Fallback con shutil (copia + replace atomico lato destinazione).
+    """
+    if not drive_run_dir:
+        return
+
+    os.makedirs(drive_run_dir, exist_ok=True)
+    files = ["last.pth", "best.pth"]
+
+    # prova rsync (migliore)
+    try:
+        for f in files:
+            src = os.path.join(run_dir, f)
+            if os.path.isfile(src):
+                subprocess.run(
+                    ["rsync", "-a", "--partial", "--inplace", src, drive_run_dir + "/"],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+        return
+    except Exception:
+        pass
+
+    # fallback: copia semplice (più lenta ma affidabile)
+    for f in files:
+        src = os.path.join(run_dir, f)
+        if os.path.isfile(src):
+            dst = os.path.join(drive_run_dir, f)
+            tmp = dst + ".tmp"
+            shutil.copy2(src, tmp)
+            os.replace(tmp, dst)
 
 
 def run_training(args):
@@ -121,6 +169,16 @@ def run_training(args):
     last_ckpt_path = os.path.join(run_dir, "last.pth")
     best_ckpt_path = os.path.join(run_dir, "best.pth")
 
+    # 4b. Drive sync (opzionale): setta env var DRIVE_SYNC_DIR per abilitarlo
+    # es: DRIVE_SYNC_DIR=/content/drive/MyDrive/AMLProject-data/checkpoints
+    drive_root = os.environ.get("DRIVE_SYNC_DIR", "").strip()
+    drive_run_dir = os.path.join(drive_root, run_name) if drive_root else None
+    if drive_run_dir:
+        os.makedirs(drive_run_dir, exist_ok=True)
+        print(f"✅ Drive sync attivo: {drive_run_dir}")
+    else:
+        print("ℹ️ Drive sync non attivo (setta env DRIVE_SYNC_DIR per abilitarlo).")
+
     # 5. (Resume) prima di init wandb (per recuperare run_id)
     start_epoch = 0
     global_step = 0
@@ -155,20 +213,18 @@ def run_training(args):
 
     # 6. WandB Init (con resume)
     if args.wandb:
-        # se non c'è run_id (prima run), generiamo id stabile
         if wandb_run_id is None:
             wandb_run_id = wandb.util.generate_id()
 
         wandb.init(
             project="AML-Semantic-Correspondence",
             id=wandb_run_id,
-            resume="allow",  # riprende se esiste, altrimenti crea
+            resume="allow",
             name=run_name,
             mode=args.wandb_mode,
             config=vars(args),
         )
 
-        # metriche con step coerente
         wandb.define_metric("global_step")
         wandb.define_metric("train_loss", step_metric="global_step")
         wandb.define_metric("epoch_avg_loss", step_metric="global_step")
@@ -272,13 +328,17 @@ def run_training(args):
             )
             print(f" Nuovo BEST checkpoint (loss={best_loss:.6f}): {best_ckpt_path}")
 
+        # 9b. Sync su Drive a fine epoca (se attivo)
+        if drive_run_dir:
+            sync_checkpoints_to_drive(run_dir, drive_run_dir)
+            print(f" ✅ Sync su Drive completata (fine epoca): {drive_run_dir}")
+
         # 10. (Opzionale) log checkpoint come Artifact su wandb
         if args.wandb and getattr(args, "wandb_artifacts", False):
             art_last = wandb.Artifact("ckpt-last", type="checkpoint")
             art_last.add_file(last_ckpt_path)
             wandb.log_artifact(art_last)
 
-            # log best solo se esiste
             if os.path.isfile(best_ckpt_path):
                 art_best = wandb.Artifact("ckpt-best", type="checkpoint")
                 art_best.add_file(best_ckpt_path)
@@ -291,4 +351,3 @@ def run_training(args):
 if __name__ == "__main__":
     args = parse_train_args()
     run_training(args)
-
