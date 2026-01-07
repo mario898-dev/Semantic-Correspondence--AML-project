@@ -25,6 +25,7 @@ def build_model(backbone: str, device: str, num_trainable_layers:int =0):
         model =  SAMExtractor(
             repo_dir="external/segment-anything",
             model_type="vit_b",
+            weights="checkpoints/SAM/sam_vit_b.pth",
             device=device,
         )
     else:
