@@ -34,9 +34,11 @@ cd ../../../
 - Carica i pesi dal drive
 ```bash
 SAM
+!mkdir -p checkpoints/SAM
 !cp /content/drive/MyDrive/AMLProject-data/weights_models/sam_vit_*.pth checkpoints/SAM/ 2>/dev/null ||true
 
 DINOv3 (tutti i .pth che iniziano con dinov3_)
+!mkdir -p checkpoints/DINOv3
 !cp /content/drive/MyDrive/AMLProject-data/weights_models/dinov3_*.pth checkpoints/DINOv3/ 2>/dev/null || true
 
 ```
