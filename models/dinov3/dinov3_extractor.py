@@ -29,8 +29,8 @@ class DINOv3Extractor(nn.Module):
         # 3. Inizializzazione modello
         if "vits16" in model_name:
             self.model = vits.vit_small(patch_size=16, **meta_config)
-        elif "vitb14" in model_name:
-            self.model = vits.vit_base(patch_size=14, **meta_config)
+        elif "vitb16" in model_name:
+            self.model = vits.vit_base(patch_size=16, **meta_config)
         else:
             raise ValueError(f"Modello {model_name} non supportato.")
 
