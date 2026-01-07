@@ -25,6 +25,16 @@ tar -xvf SPair-71k.tar.gz
 cd ../../../
 ```
 
+- Carica i pesi dal drive
+```bash
+SAM
+!cp /content/drive/MyDrive/AMLProject-data/weights_models/sam_vit_*.pth checkpoints/SAM/ 2>/dev/null ||true
+
+DINOv3 (tutti i .pth che iniziano con dinov3_)
+!cp /content/drive/MyDrive/AMLProject-data/weights_models/dinov3_*.pth checkpoints/DINOv3/ 2>/dev/null || true
+
+```
+
 - Lancia l’evaluation:
 ```bash
 !python eval.py --backbone [name] --category [name] --wandb
