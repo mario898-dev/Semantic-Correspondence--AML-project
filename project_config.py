@@ -9,8 +9,6 @@ class Config:
         IMG_SIZE = 1024
         
         MEAN = [0.485, 0.456, 0.406]
-        NORM_MEAN = [0.485, 0.456, 0.406]
-        NORM_STD = [0.229, 0.224, 0.225]
         STD = [0.229, 0.224, 0.225]
 
     class EVALUATOR:
