@@ -34,8 +34,8 @@ class SAMExtractor(nn.Module):
             )
 
         # Checkpoint
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        ckpt = os.path.join(repo_root, "checkpoints", "SAM", f"sam_{model_type}.pth")
+        # repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        ckpt = os.path.join("Semantic-Correspondence--AML-project", "checkpoints", "SAM", f"sam_{model_type}.pth")
         if not os.path.exists(ckpt):
             raise FileNotFoundError(f"Pesi SAM non trovati: {ckpt}")
 
