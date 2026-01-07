@@ -3,6 +3,12 @@
 
 ## Come eseguire l'evaluation da Colab
 
+- Montare google drive
+```bash
+from google.colab import drive
+drive.mount("/content/drive")
+```
+
 - Vai in `/content` e clona la repo con i submodules:
 ```bash
 %cd /content
