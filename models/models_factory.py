@@ -20,6 +20,14 @@ def build_model(backbone: str, device: str, num_trainable_layers:int =0):
             weights="checkpoints/DINOv3/dinov3_vits16.pth",
             device=device,
         )
+     elif backbone == "dinov3_vitb16":
+        # Nota: puoi rendere i path relativi alla REPO_ROOT se necessario
+        model =  DINOv3Extractor(
+            repo_dir="external/dinov3",
+            model_name="dinov3_vitb16",
+            weights="checkpoints/DINOv3/dinov3_vitb16.pth",
+            device=device,
+        )
 
     elif backbone == "sam_vitb":
         model =  SAMExtractor(
