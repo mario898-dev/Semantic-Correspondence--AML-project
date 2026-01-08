@@ -38,7 +38,7 @@ class SAMExtractor(nn.Module):
 
         print(f"✅ SAM loaded: {model_type} (checkpoint: {os.path.basename(ckpt)})")
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, extract_layer: int = None) -> torch.Tensor:
         enc = self.model.image_encoder
 
         # 1) Input preprocessing per SAM
@@ -63,8 +63,31 @@ class SAMExtractor(nn.Module):
             pos_ = pos_.permute(0, 2, 3, 1)
             enc.pos_embed = nn.Parameter(pos_, requires_grad=False)
 
-        feats = enc(x_sam)
-        return feats
+        if extract_layer is None:
+            # CASO A: Nessun layer specificato -> Output finale standard (con Neck, 256 canali)
+            # Chiamare enc(x_sam) usa il pos_embed che abbiamo appena aggiornato sopra
+            feats = enc(x_sam)
+            return feats
+        
+        else:
+            # CASO B: Layer specifico -> Estrazione manuale intermedia (es. 768 canali)
+            
+            # A. Patch Embedding
+            out = enc.patch_embed(x_sam)
+            
+            # B. Add Positional Embedding
+            if enc.pos_embed is not None:
+                out = out + enc.pos_embed
+
+            # C. Ciclo sui blocchi fino al layer desiderato
+            for i, blk in enumerate(enc.blocks):
+                out = blk(out)
+                if i == extract_layer:
+                    break
+            
+            # D. Permutazione (B, H, W, C) -> (B, C, H, W)
+            feats = out.permute(0, 3, 1, 2)
+            return feats
 
     def setup_finetuning(self, num_layers):
         for param in self.model.parameters():
