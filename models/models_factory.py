@@ -39,9 +39,9 @@ def build_model(backbone: str, device: str, num_trainable_layers:int =0):
      else:
         raise ValueError(f"Unknown backbone: {backbone}")
 
-    if num_trainable_layers > 0:
+     if num_trainable_layers > 0:
         if hasattr(model, 'setup_finetuning'):
             model.setup_finetuning(num_trainable_layers)
         else:
             print(f"⚠️ Warning: {backbone} non ha ancora un metodo setup_finetuning.")
-    return model
+     return model
