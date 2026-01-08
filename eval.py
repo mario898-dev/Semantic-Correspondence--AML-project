@@ -96,8 +96,16 @@ def run_evaluation(args):
 
         # Estrazione feature
         with torch.no_grad():
-            src_feats = model(src_img)[0]  # (C, Hf, Wf)
-            trg_feats = model(trg_img)[0]  # (C, Hf, Wf)
+            forward_kwargs = {}
+            
+            # Passiamo extract_layer SOLO se è SAM e se l'utente l'ha specificato
+            if "sam" in args.backbone and args.extract_layer is not None:
+                forward_kwargs["extract_layer"] = args.extract_layer
+            
+            # Chiamata al modello con unpacking dei kwargs
+            # Nota: [0] serve perché il tuo eval si aspetta di rimuovere la dimensione batch
+            src_feats = model(src_img, **forward_kwargs)[0]  # (C, Hf, Wf)
+            trg_feats = model(trg_img, **forward_kwargs)[0]  # (C, Hf, Wf)
 
         # Dimensioni reali immagine (coerenti con i keypoint del dataset)
         img_h, img_w = src_img.shape[-2:]
@@ -205,3 +213,4 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
