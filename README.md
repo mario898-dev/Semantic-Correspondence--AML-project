@@ -66,3 +66,8 @@ L'argomento Wandb va inserito solo se si vuole utilizzare wandb
   [--wandb_mode online|offline|disabled]
 
 ```
+
+- IMG_SIZE
+-- DINOV2: 518
+-- DINOV3: 512
+-- SAM: 1024  
