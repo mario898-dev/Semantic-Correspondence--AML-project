@@ -38,6 +38,13 @@ def parse_eval_args():
         help="Modalità wandb"
     )
 
+    parser.add_argument(
+        "--extract_layer",
+        type=int,
+        default=None,
+        help="Indice del layer da estrarre (solo per SAM). Es: 8 per il layer 9."
+    )
+
     return parser.parse_args()
 
 def parse_train_args():
