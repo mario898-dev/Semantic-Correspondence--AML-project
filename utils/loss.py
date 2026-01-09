@@ -25,6 +25,8 @@ class FeatMapLoss:     # Change the name to FeatMapLoss
         bz, c, h1, w1 = trg_featmaps.shape
 
         loss = 0
+
+        valid_samples = 0  # Contatore per i campioni validi nel batch
         for b in range(bz):
 
             featmap0 = src_featmaps[b:b+1].clone()
@@ -33,6 +35,10 @@ class FeatMapLoss:     # Change the name to FeatMapLoss
             xy1 = trg_kps[b:b+1].clone()
             npt = npts[b].clone()
 
+            if npt == 0:
+                continue
+            
+            valid_samples += 1
             # normalize xy0 to [-1, 1] and scale xy1 t0 (h1, w1)
             xy0 = normalise_coordinates(xy0, src_imgsize)
             xy1 = scaling_coordinates(xy1, trg_imgsize, (h1, w1))
@@ -56,7 +62,11 @@ class FeatMapLoss:     # Change the name to FeatMapLoss
 
             loss = loss + self.efficient_gaussian_smoothed_cross_entropy(xy0_corr, xy1, 7)
         
-        loss = loss / bz
+        if valid_samples > 0:
+            loss = loss / valid_samples
+        else:
+            # Se sfortunatamente tutto il batch fosse vuoto, ritorniamo 0 con gradiente per non rompere il grafo
+            loss = torch.tensor(0.0, device=src_featmaps.device, requires_grad=True)
 
         return loss
 
