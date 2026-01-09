@@ -124,14 +124,8 @@ def run_training(args):
             src_kps = batch["src_kps"].to(device)
             trg_kps = batch["trg_kps"].to(device)
 
-            # Check per batch vuoti (Critico per Batch Size > 1 e fix NaN)
-            valid_mask = (
-                (src_kps[:, 0] >= 0) & (src_kps[:, 1] >= 0) &
-                (trg_kps[:, 0] >= 0) & (trg_kps[:, 1] >= 0)
-            )
-            npts = valid_mask.sum(dim=1)
             
-            # Se l'intero batch è vuoto, saltiamo per evitare crash
+            npts = batch['n_pts']
             if npts.sum() == 0:
                 continue
 
