@@ -130,14 +130,14 @@ def run_training(args):
             src_kps = batch["src_kps"].to(device)
             trg_kps = batch["trg_kps"].to(device)
 
-            valid_mask = (
-                (src_kps[:, 0] >= 0) & (src_kps[:, 1] >= 0) &
-                (trg_kps[:, 0] >= 0) & (trg_kps[:, 1] >= 0)
-            )
+            #valid_mask = (
+            #    (src_kps[:, 0] >= 0) & (src_kps[:, 1] >= 0) &
+            #    (trg_kps[:, 0] >= 0) & (trg_kps[:, 1] >= 0)
+            #)
 
-            npts = valid_mask.sum(dim=1)
-            if npts.sum() == 0:
-                continue
+            #npts = valid_mask.sum(dim=1)
+            #if npts.sum() == 0:
+            #    continue
 
             optimizer.zero_grad(set_to_none=True)
 
@@ -157,7 +157,7 @@ def run_training(args):
                 trg_kps=trg_kps,
                 src_imgsize=(src_h, src_w),
                 trg_imgsize=(trg_h, trg_w),
-                npts=npts,
+                npts=batch['n_pts'],
                 softmax_temp=0.1,
                 enable_l2_norm=True
             )
