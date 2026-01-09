@@ -135,9 +135,9 @@ def run_training(args):
             #    (trg_kps[:, 0] >= 0) & (trg_kps[:, 1] >= 0)
             #)
 
-            #npts = valid_mask.sum(dim=1)
-            #if npts.sum() == 0:
-            #    continue
+            npts = batch['n_pts']
+            if npts.sum() == 0:
+                continue
 
             optimizer.zero_grad(set_to_none=True)
 
@@ -157,9 +157,8 @@ def run_training(args):
                 trg_kps=trg_kps,
                 src_imgsize=(src_h, src_w),
                 trg_imgsize=(trg_h, trg_w),
-                npts=batch['n_pts'],
-                softmax_temp=0.1,
-                enable_l2_norm=True
+                npts=npts,
+                softmax_temp=0.04
             )
 
             if torch.isnan(loss):
