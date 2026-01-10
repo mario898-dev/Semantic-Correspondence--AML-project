@@ -4,13 +4,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 class SAMExtractor(nn.Module):
-    def __init__(self, repo_dir: str, model_type: str = "vit_b", weights: str="", device: str = "cuda"):
+    def __init__(self, repo_dir: str, model_type: str = "vit_b", weights: str = None, device: str = "cuda"):
+        """
+        Wrapper per l'encoder di Segment Anything (SAM) adatto per Semantic Correspondence.
+        Gestisce il caricamento dei pesi, l'interpolazione posizionale dinamica e il fine-tuning parziale.
+        """
         super().__init__()
         self.device = device
 
-        # Path verso il submodule segment-anything
+        # 1. Setup path per importare la libreria esterna segment-anything
         abs_repo_dir = os.path.abspath(repo_dir)
         if abs_repo_dir not in sys.path:
             sys.path.insert(0, abs_repo_dir)
@@ -18,85 +21,128 @@ class SAMExtractor(nn.Module):
         try:
             from segment_anything import sam_model_registry
         except ImportError as e:
-            raise ImportError(
-                f"Controlla che {abs_repo_dir} contenga 'segment_anything'. Errore: {e}"
-            )
+            raise ImportError(f"Errore import SAM da {abs_repo_dir}. Assicurati che la cartella esista. Errore: {e}")
 
-        # Checkpoint (stesso stile di DINOv3: path passato dall'esterno)
-        if os.path.exists(weights):
-            ckpt = weights
+        # 2. Inizializzazione SAM
+        print(f"🏗️  Costruzione architettura SAM ({model_type})...")
+        # Inizializziamo senza checkpoint automatico per gestire il caricamento manualmente sotto
+        self.model = sam_model_registry[model_type](checkpoint=None)
+        self.model.to(device)
+
+        # 3. Caricamento Pesi Robusto
+        if weights and os.path.exists(weights):
+            print(f"📥 Caricamento pesi da: {os.path.basename(weights)}")
+            try:
+                # weights_only=False è necessario per alcuni vecchi formati pth, ma attenzione alla sicurezza
+                checkpoint = torch.load(weights, map_location=device, weights_only=False)
+            except TypeError:
+                checkpoint = torch.load(weights, map_location=device)
+
+            # Gestione caso in cui il checkpoint è un dizionario o solo state_dict
+            if isinstance(checkpoint, dict) and "model" in checkpoint:
+                state_dict = checkpoint["model"]
+            else:
+                state_dict = checkpoint
+
+            # Rimozione prefisso 'model.' se presente (comune nei salvataggi DDP)
+            new_state_dict = {}
+            for k, v in state_dict.items():
+                if k.startswith("model."):
+                    new_state_dict[k.replace("model.", "", 1)] = v
+                else:
+                    new_state_dict[k] = v
+            
+            msg = self.model.load_state_dict(new_state_dict, strict=False)
+            print(f"✅ Pesi SAM caricati! Log: {msg}")
+        elif weights:
+            raise FileNotFoundError(f"❌ File pesi non trovato: {weights}")
         else:
-            raise FileNotFoundError(f"Pesi SAM non trovati: {weights}")
+            print("⚠️  Nessun peso specificato: SAM inizializzato random (utile solo per debug).")
 
-        # Init SAM
-        sam = sam_model_registry[model_type](checkpoint=ckpt)
-        self.model = sam.to(device)
-
-        # Costanti ImageNet (buffer)
+        # 4. Buffer per normalizzazione (ImageNet mean/std per il preprocessing in ingresso)
         self.register_buffer("imagenet_mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
         self.register_buffer("imagenet_std",  torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
 
-        print(f"✅ SAM loaded: {model_type} (checkpoint: {os.path.basename(ckpt)})")
-
     def forward(self, x: torch.Tensor, extract_layer: int = None) -> torch.Tensor:
+        """
+        Forward pass dell'image encoder.
+        x: (B, 3, H, W) -> Le immagini possono avere size arbitraria.
+        Returns: (B, C, H/16, W/16) -> Feature map densa.
+        """
         enc = self.model.image_encoder
 
-        # 1) Input preprocessing per SAM
+        # --- A. Preprocessing ---
+        # SAM si aspetta input normalizzati internamente basandosi su 0-255.
+        # Qui gestiamo sia input normalizzati ImageNet (tipici di Dataloader standard) sia [0,1].
         if x.max() > 2.0 or x.min() < -1.0:
+            # Assumiamo standardizzazione ImageNet -> Denormalizziamo a [0,1]
             mean = self.imagenet_mean.to(x.device)
             std = self.imagenet_std.to(x.device)
             x01 = (x * std + mean).clamp(0.0, 1.0)
         else:
+            # Assumiamo già in [0,1]
             x01 = x.clamp(0.0, 1.0)
 
+        # Scaling a 0-255 e normalizzazione specifica di SAM
         x255 = x01 * 255.0
         x_sam = (x255 - self.model.pixel_mean) / self.model.pixel_std
 
-        # 2) Fix pos_embed alla griglia patch corrente
-        patch = enc.patch_embed.proj.stride[0]
-        hp, wp = x_sam.shape[-2] // patch, x_sam.shape[-1] // patch
+        # --- B. Gestione Positional Embeddings Dinamica ---
+        # SAM è trainato su 1024x1024. Se l'immagine è diversa, interpoliamo i pos_embed.
+        # CRUCIALE: Non sovrascriviamo enc.pos_embed, usiamo una variabile temporanea.
+        patch_size = enc.patch_embed.proj.stride[0] # Di solito 16
+        hp, wp = x_sam.shape[-2] // patch_size, x_sam.shape[-1] // patch_size
 
-        pos = enc.pos_embed
-        if pos.shape[1] != hp or pos.shape[2] != wp:
-            pos_ = pos.permute(0, 3, 1, 2)
-            pos_ = F.interpolate(pos_, size=(hp, wp), mode="bilinear", align_corners=False)
-            pos_ = pos_.permute(0, 2, 3, 1)
-            enc.pos_embed = nn.Parameter(pos_, requires_grad=False)
-
-        if extract_layer is None:
-            # CASO A: Nessun layer specificato -> Output finale standard (con Neck, 256 canali)
-            # Chiamare enc(x_sam) usa il pos_embed che abbiamo appena aggiornato sopra
-            feats = enc(x_sam)
-            return feats
+        # Reference ai pesi originali
+        pos_embed = enc.pos_embed
         
-        else:
-            # CASO B: Layer specifico -> Estrazione manuale intermedia (es. 768 canali)
-            
-            # A. Patch Embedding
-            out = enc.patch_embed(x_sam)
-            
-            # B. Add Positional Embedding
-            if enc.pos_embed is not None:
-                out = out + enc.pos_embed
+        # Interpolazione se le dimensioni dei patch non coincidono con quelle native (64x64)
+        if pos_embed.shape[1] != hp or pos_embed.shape[2] != wp:
+            pos_embed = pos_embed.permute(0, 3, 1, 2)  # (1, C, H, W)
+            pos_embed = F.interpolate(pos_embed, size=(hp, wp), mode="bilinear", align_corners=False)
+            pos_embed = pos_embed.permute(0, 2, 3, 1)  # (1, H, W, C)
 
-            # C. Ciclo sui blocchi fino al layer desiderato
-            for i, blk in enumerate(enc.blocks):
-                out = blk(out)
-                if i == extract_layer:
-                    break
-            
-            # D. Permutazione (B, H, W, C) -> (B, C, H, W)
-            feats = out.permute(0, 3, 1, 2)
-            return feats
+        # --- C. Estrazione Feature ---
+        # 1. Patch Embedding
+        out = enc.patch_embed(x_sam)
+        
+        # 2. Somma Positional Embedding (usando il tensore interpolato)
+        if enc.pos_embed is not None:
+            out = out + pos_embed 
 
-    def setup_finetuning(self, num_layers):
-        for param in self.model.parameters():
+        # 3. Passaggio attraverso i blocchi Transformer
+        limit = len(enc.blocks) if extract_layer is None else extract_layer + 1
+
+        for i, blk in enumerate(enc.blocks):
+            out = blk(out)
+            if i == limit - 1:
+                break
+        
+        # Output shape: (B, H_patch, W_patch, C) -> Permute to (B, C, H_patch, W_patch)
+        feats = out.permute(0, 3, 1, 2)
+        return feats
+
+    def setup_finetuning(self, num_layers: int):
+        """
+        Configura i layer per il fine-tuning.
+        Congela tutto l'encoder, poi sblocca gli ultimi 'num_layers' blocchi.
+        """
+        # 1. Congela tutto inizialmente
+        for param in self.model.image_encoder.parameters():
             param.requires_grad = False
 
         blocks = self.model.image_encoder.blocks
         total_blocks = len(blocks)
-        for i in range(total_blocks - num_layers, total_blocks):
-            for param in blocks[i].parameters():
-                param.requires_grad = True
-
-        print(f"{self.__class__.__name__}: Sbloccati gli ultimi {num_layers}/{total_blocks} blocchi dell'image_encoder.")
+        
+        # 2. Sblocca gli ultimi k layer
+        if num_layers > 0:
+            start_layer = total_blocks - num_layers
+            if start_layer < 0: start_layer = 0
+            
+            for i in range(start_layer, total_blocks):
+                for param in blocks[i].parameters():
+                    param.requires_grad = True
+            
+            print(f"🔥 {self.__class__.__name__}: Sbloccati ultimi {num_layers}/{total_blocks} blocchi per training.")
+        else:
+            print(f"❄️ {self.__class__.__name__}: Encoder completamente congelato (Frozen).")
