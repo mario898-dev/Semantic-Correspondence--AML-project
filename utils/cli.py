@@ -18,11 +18,11 @@ def parse_eval_args():
     )
 
     parser.add_argument(
-        "--max_pairs",
-        type=int,
-        default=None,
-        help="Numero massimo di coppie (debug)"
+        "--weights",
+        type=str
+        default=None
     )
+  
 
     parser.add_argument(
         "--wandb",
