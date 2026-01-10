@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class DINOv2Extractor(nn.Module):
-    def __init__(self, model_name: str, device: str = 'cuda'):
+    def __init__(self, model_name: str, device: str = 'cuda', weights: str=None):
         super().__init__()
         self.model = torch.hub.load('facebookresearch/dinov2', model_name)
         self.model = self.model.to(device)
