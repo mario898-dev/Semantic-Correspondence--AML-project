@@ -41,6 +41,7 @@ class DINOv3Extractor(nn.Module):
 
             if isinstance(checkpoint, dict) and "model" in checkpoint:
                 state_dict = checkpoint["model"]
+                print("ℹ️ Struttura rilevata: Dizionario nidificato. Estraggo chiave ['model'].")
             else:
                 state_dict = checkpoint
             
