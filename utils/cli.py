@@ -16,11 +16,7 @@ def parse_eval_args():
         default="all",
         help="Categoria SPair-71k (es. cat, dog, car, all)"
     )
-    parser.add_argument(
-        "--weights",
-        type=str,
-        default=None
-    )
+    
 
     parser.add_argument(
         "--weights",
@@ -98,6 +94,11 @@ def parse_train_args():
         type=int,
         default=1,
         help="Numero di blocchi finali del backbone da sbloccare per il fine-tuning"
+    )
+    parser.add_argument(
+        "--weights",
+        type=str,
+        default=None
     )
     
     parser.add_argument(
