@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import os
 
 class DINOv2Extractor(nn.Module):
     def __init__(self, model_name: str, device: str = 'cuda', weights: str=None):

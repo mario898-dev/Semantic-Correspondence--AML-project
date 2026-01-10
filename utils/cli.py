@@ -19,7 +19,7 @@ def parse_eval_args():
 
     parser.add_argument(
         "--weights",
-        type=str
+        type=str,
         default=None
     )
   
