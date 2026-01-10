@@ -14,7 +14,7 @@ def build_model(backbone: str, device: str, num_trainable_layers: int = 0, weigh
         model = DINOv3Extractor(
             repo_dir="external/dinov3",
             model_name="dinov3_vits16",
-            weights= f"checkpoints/DINOv3/{weights}",
+            weights= weights,
             device=device,
         )
 
@@ -22,7 +22,7 @@ def build_model(backbone: str, device: str, num_trainable_layers: int = 0, weigh
         model = DINOv3Extractor(
             repo_dir="external/dinov3",
             model_name="dinov3_vitb16",
-            weights= f"checkpoints/DINOv3/{weights}",
+            weights= weights,
             device=device,
         )
 
