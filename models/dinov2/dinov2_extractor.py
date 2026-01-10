@@ -6,6 +6,39 @@ class DINOv2Extractor(nn.Module):
         super().__init__()
         self.model = torch.hub.load('facebookresearch/dinov2', model_name)
         self.model = self.model.to(device)
+        if weights is not None and isinstance(weights, str):
+            if os.path.exists(weights):
+                print(f"📥 Caricamento pesi custom da: {weights}")
+                
+                # Caricamento sicuro (gestisce compatibilità torch 2.6+)
+                try:
+                    checkpoint = torch.load(weights, map_location=device, weights_only=False)
+                except TypeError:
+                    checkpoint = torch.load(weights, map_location=device)
+
+                # A. Gestione se il checkpoint è un dizionario (es. contiene 'epoch', 'model')
+                if isinstance(checkpoint, dict) and "model" in checkpoint:
+                    state_dict = checkpoint["model"]
+                    print("ℹ️ Checkpoint: Trovata chiave 'model'.")
+                else:
+                    state_dict = checkpoint
+
+                # B. Pulizia Prefissi (Cruciale per il tuo file best.pth)
+                # Il tuo file ha chiavi tipo "model.blocks.0...", ma self.model vuole "blocks.0..."
+                new_state_dict = {}
+                for k, v in state_dict.items():
+                    if k.startswith("model."):
+                        # Rimuove il prefisso "model."
+                        new_state_dict[k.replace("model.", "", 1)] = v
+                    else:
+                        new_state_dict[k] = v
+                
+                # C. Caricamento effettivo
+                # strict=False evita crash se mancano pezzi non essenziali (es. la head originale)
+                msg = self.model.load_state_dict(new_state_dict, strict=False)
+                print(f"✅ Pesi custom caricati! Risultato load: {msg}")
+            else:
+                print(f"⚠️ ATTENZIONE: File pesi '{weights}' non trovato. Uso i pesi default di DINOv2.")
         self.patch_size = self.model.patch_size
         self.embed_dim = self.model.embed_dim
         self.device = device
