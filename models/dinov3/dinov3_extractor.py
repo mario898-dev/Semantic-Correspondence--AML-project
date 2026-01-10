@@ -47,6 +47,7 @@ class DINOv3Extractor(nn.Module):
 
             msg = self.model.load_state_dict(state_dict, strict=True)
             print(f"✅ DINOv3 caricato con successo: {msg}")
+            print(f"✅ DINOv3 caricato con successo dal file: {os.path.basename(weights)}")
         else:
             raise FileNotFoundError(f"Pesi non trovati: {weights}")
 
