@@ -3,21 +3,21 @@ from .SAM.SAM_extractor import SAMExtractor
 from .dinov3.dinov3_extractor import DINOv3Extractor
 
 
-def build_model(backbone: str, device: str, num_trainable_layers: int = 0):
+def build_model(backbone: str, device: str, num_trainable_layers: int = 0, weights: str=None):
     if backbone == "dinov2_vits14":
-        model = DINOv2Extractor("dinov2_vits14", device)
+        model = DINOv2Extractor("dinov2_vits14", device, weights)
 
     elif backbone == "dinov2_vitb14":
-        model = DINOv2Extractor("dinov2_vitb14", device)
+        model = DINOv2Extractor("dinov2_vitb14", device, weights)
 
     elif backbone == "dinov2_vitl14":
-        model = DINOv2Extractor("dinov2_vitl14", device)
+        model = DINOv2Extractor("dinov2_vitl14", device, weights)
 
     elif backbone == "dinov3_vits16":
         model = DINOv3Extractor(
             repo_dir="external/dinov3",
             model_name="dinov3_vits16",
-            weights="checkpoints/DINOv3/dinov3_vits16.pth",
+            weights= f"checkpoints/DINOv3/{weights}",
             device=device,
         )
 
@@ -25,7 +25,7 @@ def build_model(backbone: str, device: str, num_trainable_layers: int = 0):
         model = DINOv3Extractor(
             repo_dir="external/dinov3",
             model_name="dinov3_vitb16",
-            weights="checkpoints/DINOv3/dinov3_vitb16.pth",
+            weights= f"checkpoints/DINOv3/{weights}",
             device=device,
         )
 
@@ -33,7 +33,7 @@ def build_model(backbone: str, device: str, num_trainable_layers: int = 0):
         model = SAMExtractor(
             repo_dir="external/segment-anything",
             model_type="vit_b",
-            weights="checkpoints/SAM/sam_vit_b.pth",
+            weights= f"checkpoints/SAM/{weights}",
             device=device,
         )
 
