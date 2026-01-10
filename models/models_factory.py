@@ -30,7 +30,7 @@ def build_model(backbone: str, device: str, num_trainable_layers: int = 0, weigh
         model = SAMExtractor(
             repo_dir="external/segment-anything",
             model_type="vit_b",
-            weights= f"checkpoints/SAM/{weights}",
+            weights= weights,
             device=device,
         )
 
