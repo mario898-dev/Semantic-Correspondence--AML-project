@@ -16,6 +16,11 @@ def parse_eval_args():
         default="all",
         help="Categoria SPair-71k (es. cat, dog, car, all)"
     )
+    parser.add_argument(
+        "--weights",
+        type=str,
+        default=None
+    )
 
     parser.add_argument(
         "--weights",
