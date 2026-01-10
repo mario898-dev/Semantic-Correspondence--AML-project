@@ -21,7 +21,7 @@ def run_evaluation(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Utilizzando il dispositivo: {device}")
 
-    model = build_model(args.backbone, device, 0)
+    model = build_model(args.backbone, device, 0, args.weights)
     model.eval()
 
     # --- DATASET ---
@@ -213,4 +213,5 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
