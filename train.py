@@ -23,7 +23,7 @@ def run_training(args):
     print(f"Device training: {device} (A100 Mode 🚀)")
 
     print(f"Costruzione modello {args.backbone} con {args.trainable_layers} layer addestrabili...")
-    model = build_model(args.backbone, device, num_trainable_layers=args.trainable_layers, args.weights)
+    model = build_model(args.backbone, device, num_trainable_layers=args.trainable_layers, weights=args.weights)
     model.train()
 
     # --- 2. DATASET E DATALOADER ---
@@ -230,4 +230,5 @@ def run_training(args):
 if __name__ == "__main__":
     args = parse_train_args()
     run_training(args)
+
 
