@@ -66,8 +66,63 @@ def compute_similarity_logits(src_feats, trg_feats, src_kps_px, img_h, img_w):
     
     return sim
 
+def compute_soft_argmax(sim_map, window_size=5, temperature=0.05):
+    """
+    Calcola la posizione (y, x) usando Window Soft Argmax.
+    sim_map: Tensor (Nv, Hf, Wf) con i punteggi di similarità.
+    window_size: raggio della finestra (es. 5 significa 5 px sopra/sotto/dx/sx).
+    temperature: controlla quanto è 'piccante' la softmax (più basso = più preciso).
+    """
+    Nv, H, W = sim_map.shape
+    device = sim_map.device
 
-def find_correspondences(src_feats, trg_feats, src_kps_px, img_h, img_w):
+    # 1. Trova il picco Hard (il punto massimo attuale)
+    # Appiattiamo a (Nv, H*W) per trovare l'indice massimo
+    flat_sim = sim_map.view(Nv, -1)
+    max_idx = flat_sim.argmax(dim=1)
+    
+    # Convertiamo l'indice piatto in coordinate (y, x) del picco
+    peak_y = (max_idx // W)
+    peak_x = (max_idx % W)
+
+    # 2. Crea una griglia di coordinate
+    # grid_x e grid_y avranno forma (1, H, W)
+    grid_y_coords, grid_x_coords = torch.meshgrid(
+        torch.arange(H, device=device), 
+        torch.arange(W, device=device), 
+        indexing='ij'
+    )
+    grid_y_coords = grid_y_coords.unsqueeze(0) # (1, H, W)
+    grid_x_coords = grid_x_coords.unsqueeze(0) # (1, H, W)
+
+    # 3. Crea la maschera per la Finestra (Window)
+    # Vogliamo tenere solo i punti vicini al picco (entro window_size)
+    # peak_y.view(Nv, 1, 1) serve per confrontare ogni picco con tutta la griglia
+    mask_y = (grid_y_coords >= (peak_y.view(Nv, 1, 1) - window_size)) & \
+             (grid_y_coords <= (peak_y.view(Nv, 1, 1) + window_size))
+             
+    mask_x = (grid_x_coords >= (peak_x.view(Nv, 1, 1) - window_size)) & \
+             (grid_x_coords <= (peak_x.view(Nv, 1, 1) + window_size))
+             
+    window_mask = mask_y & mask_x  # (Nv, H, W) - True solo dentro la finestra
+
+    # 4. Applica la maschera ai punteggi
+    # Mettiamo -infinito fuori dalla finestra, così la softmax li renderà 0
+    masked_sim = sim_map.clone()
+    masked_sim[~window_mask] = -float('inf')
+
+    # 5. Softmax e Calcolo del Centro di Massa
+    # Applichiamo la softmax spaziale (su H e W appiattiti)
+    # Temperatura bassa (es. 0.05) rende la distribuzione più concentrata
+    probs = F.softmax(masked_sim.view(Nv, -1) / temperature, dim=1).view(Nv, H, W)
+
+    # Moltiplichiamo le probabilità per le coordinate e sommiamo
+    expected_y = (probs * grid_y_coords).sum(dim=[1, 2]) # Somma su H e W
+    expected_x = (probs * grid_x_coords).sum(dim=[1, 2])
+
+    return expected_x, expected_y
+
+def find_correspondences(src_feats, trg_feats, src_kps_px, img_h, img_w, use_window_soft = False):
     """
     Wrapper per l'INFERENZA (Test/Validation).
     Chiama la logica condivisa e applica l'argmax (non differenziabile).
@@ -94,11 +149,21 @@ def find_correspondences(src_feats, trg_feats, src_kps_px, img_h, img_w):
     stride_y = img_h / Hf
 
     # --- 2. Parte Specifica Inference (Argmax) ---
-    max_idx = sim.argmax(dim=1)
-
-    pred_y = (max_idx // Wf).float()
-    pred_x = (max_idx % Wf).float()
-
+   if use_window_soft:
+        # --- A. WINDOW SOFT ARGMAX ---
+        # 1. Reshape della similarità per avere (Nv, Hf, Wf)
+        sim_2d = sim.view(Nv, Hf, Wf)
+        
+        # 2. Chiamiamo la funzione che abbiamo creato sopra
+        # Raggio 3 o 5 è tipico per feature maps piccole come quelle di DINO
+        pred_x, pred_y = compute_soft_argmax(sim_2d, window_size=5, temperature=0.1)
+        
+    else:
+        # --- B. HARD ARGMAX (Vecchia versione) ---
+        max_idx = sim.argmax(dim=1)
+        pred_y = (max_idx // Wf).float()
+        pred_x = (max_idx % Wf).float()
+        
     # Feature Grid -> Pixel coords (Patch Center Convention)
     pred_x_px = (pred_x + 0.5) * stride_x
     pred_y_px = (pred_y + 0.5) * stride_y
