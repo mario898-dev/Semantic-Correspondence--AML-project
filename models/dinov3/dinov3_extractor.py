@@ -36,8 +36,11 @@ class DINOv3Extractor(nn.Module):
 
         # 4. Caricamento pesi con gestione del dizionario Meta
         if os.path.exists(weights):
-            checkpoint = torch.load(weights, map_location='cpu')
-            
+            try:
+                checkpoint = torch.load(weights, map_location='cpu', weights_only=False)
+            except TypeError:
+                # Fallback per versioni vecchie di torch che non hanno weights_only
+                checkpoint = torch.load(weights, map_location='cpu')
 
             if isinstance(checkpoint, dict) and "model" in checkpoint:
                 state_dict = checkpoint["model"]
