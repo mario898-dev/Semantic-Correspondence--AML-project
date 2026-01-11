@@ -45,8 +45,16 @@ class DINOv3Extractor(nn.Module):
             else:
                 state_dict = checkpoint
             
+            # B. Pulizia Prefissi (FIX PER IL TUO ERRORE)
+            # Rimuove il prefisso "model." se il checkpoint è stato salvato con un wrapper
+            new_state_dict = {}
+            for k, v in state_dict.items():
+                if k.startswith("model."):
+                    new_state_dict[k.replace("model.", "", 1)] = v
+                else:
+                    new_state_dict[k] = v
 
-            msg = self.model.load_state_dict(state_dict, strict=True)
+            msg = self.model.load_state_dict(new_state_dict, strict=True)
             print(f"✅ DINOv3 caricato con successo: {msg}")
             print(f"✅ DINOv3 caricato con successo dal file: {os.path.basename(weights)}")
         else:
