@@ -49,7 +49,7 @@ class Config:
             for key, size in cls.MODEL_RESOLUTIONS.items():
                 if key in model_name:
                     cls.IMG_SIZE = size
-                    print(f" Config: Risoluzione impostata a {size}px per {model_name}")
+                    #print(f" Config: Risoluzione impostata a {size}px per {model_name}")
                     found = True
                     break
             

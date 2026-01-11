@@ -35,6 +35,8 @@ def run_evaluation(args):
         category=args.category
     )
 
+    print(f"IMG_SIZE usata in eval: {Config.DATASET.IMG_SIZE}")
+
     # --- METRICHE ---
     alphas = Config.EVALUATOR.ALPHA
 
