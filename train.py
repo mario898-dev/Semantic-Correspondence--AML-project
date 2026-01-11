@@ -29,7 +29,7 @@ def run_training(args):
     # --- 2. DATASET E DATALOADER ---
     print(f"Caricamento SPair-71k (split: train, category: {args.category})...")
     train_dataset = SPairDataset(cfg=Config, split="trn", category=args.category)
-
+    
     # Configurazione ottimizzata per A100 (più workers, shuffle attivo)
     train_loader = DataLoader(
         train_dataset,
@@ -40,6 +40,7 @@ def run_training(args):
     )
     print(f"Training su {len(train_dataset)} coppie.")
 
+     print(f"IMG_SIZE usata in train: {Config.DATASET.IMG_SIZE}")
     # --- 3. OPTIMIZER E LOSS ---
     params_to_optimize = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.AdamW(params_to_optimize, lr=args.lr)
@@ -230,5 +231,6 @@ def run_training(args):
 if __name__ == "__main__":
     args = parse_train_args()
     run_training(args)
+
 
 
