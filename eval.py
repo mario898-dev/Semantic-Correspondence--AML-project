@@ -123,6 +123,7 @@ def run_evaluation(args):
             src_kps_valid.to(device),
             img_h,
             img_w,
+            use_window_soft=args.use_window_soft
         ).cpu()
 
         # Metriche
@@ -219,5 +220,6 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
 
