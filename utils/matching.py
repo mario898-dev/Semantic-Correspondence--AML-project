@@ -152,7 +152,6 @@ def find_correspondences(src_feats, trg_feats, src_kps_px, img_h, img_w, use_win
     if use_window_soft:
         # --- A. WINDOW SOFT ARGMAX ---
         # 1. Reshape della similarità per avere (Nv, Hf, Wf)
-        print("Using window_soft_argmax")
         sim_2d = sim.view(Nv, Hf, Wf)
         
         # 2. Chiamiamo la funzione che abbiamo creato sopra
@@ -161,7 +160,6 @@ def find_correspondences(src_feats, trg_feats, src_kps_px, img_h, img_w, use_win
         
     else:
         # --- B. HARD ARGMAX (Vecchia versione) ---
-        print("Using argmax")
         max_idx = sim.argmax(dim=1)
         pred_y = (max_idx // Wf).float()
         pred_x = (max_idx % Wf).float()
