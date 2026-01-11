@@ -48,8 +48,8 @@ def parse_eval_args():
 
     parser.add_argument(
         "--use_window_soft",
-        type=Boolean,
-        default=False,
+        type=int,
+        default=0,
         help='Se presente, usa Window Soft Argmax invece di Argmax classico'
     )
 
