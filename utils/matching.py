@@ -149,7 +149,7 @@ def find_correspondences(src_feats, trg_feats, src_kps_px, img_h, img_w, use_win
     stride_y = img_h / Hf
 
     # --- 2. Parte Specifica Inference (Argmax) ---
-   if use_window_soft:
+    if use_window_soft:
         # --- A. WINDOW SOFT ARGMAX ---
         # 1. Reshape della similarità per avere (Nv, Hf, Wf)
         sim_2d = sim.view(Nv, Hf, Wf)
