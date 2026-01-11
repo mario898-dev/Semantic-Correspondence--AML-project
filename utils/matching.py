@@ -66,7 +66,7 @@ def compute_similarity_logits(src_feats, trg_feats, src_kps_px, img_h, img_w):
     
     return sim
 
-def compute_soft_argmax(sim_map, window_size=5, temperature=0.05):
+def compute_soft_argmax(sim_map, window_size=3, temperature=0.02):
     """
     Calcola la posizione (y, x) usando Window Soft Argmax.
     sim_map: Tensor (Nv, Hf, Wf) con i punteggi di similarità.
@@ -156,7 +156,7 @@ def find_correspondences(src_feats, trg_feats, src_kps_px, img_h, img_w, use_win
         
         # 2. Chiamiamo la funzione che abbiamo creato sopra
         # Raggio 3 o 5 è tipico per feature maps piccole come quelle di DINO
-        pred_x, pred_y = compute_soft_argmax(sim_2d, window_size=5, temperature=0.1)
+        pred_x, pred_y = compute_soft_argmax(sim_2d, window_size=3, temperature=0.02)
         
     else:
         # --- B. HARD ARGMAX (Vecchia versione) ---
