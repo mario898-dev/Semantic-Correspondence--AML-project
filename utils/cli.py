@@ -46,6 +46,13 @@ def parse_eval_args():
         help="Indice del layer da estrarre (solo per SAM). Es: 8 per il layer 9."
     )
 
+    parser.add_argument(
+        "--use_window_soft",
+        type=Boolean,
+        default=False,
+        help='Se presente, usa Window Soft Argmax invece di Argmax classico'
+    )
+
     return parser.parse_args()
 
 def parse_train_args():
