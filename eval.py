@@ -55,6 +55,8 @@ def run_evaluation(args):
     print(f"\n{'='*60}")
     print(f"VALUTAZIONE TRAINING-FREE su SPair-71k ({len(test_dataset)} pairs)")
     print(f"{'='*60}\n")
+    
+    print("Using window soft argmax (task3)" if args.use_window_soft == 1 else "Using argmax (task1)")
 
     # --- WANDB INIT (solo se attivo) ---
     if args.wandb:
@@ -220,6 +222,7 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
 
 
