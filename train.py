@@ -18,6 +18,9 @@ from utils.validation import validate_epoch  # Importiamo la nuova funzione
 
 
 def run_training(args):
+
+    Config.DATASET.set_resolution(args.backbone)
+    
     # --- 1. SETUP DISPOSITIVO E MODELLO ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device training: {device} (A100 Mode 🚀)")
@@ -231,6 +234,7 @@ def run_training(args):
 if __name__ == "__main__":
     args = parse_train_args()
     run_training(args)
+
 
 
 
