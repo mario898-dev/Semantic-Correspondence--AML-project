@@ -17,6 +17,10 @@ REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 def run_evaluation(args):
+
+    # Questo aggiorna Config.DATASET.IMG_SIZE in base al backbone scelto (es. 'dinov3_vitl16')
+    Config.DATASET.set_resolution(args.backbone)
+
     # --- SETUP DISPOSITIVO E MODELLO ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Utilizzando il dispositivo: {device}")
