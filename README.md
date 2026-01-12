@@ -22,13 +22,15 @@ pip install -r requirements.txt
 ```
 
 
-- Scarica SPair-71k nella cartella data
+- Scarica SPair-71k 
 ```bash
-mkdir -p external/SD4Match/asset
-cd external/SD4Match/asset
-wget http://cvlab.postech.ac.kr/research/SPair-71k/data/SPair-71k.tar.gz
-tar -xvf SPair-71k.tar.gz
-cd ../../../
+!mkdir -p dataset
+!rm -rf dataset/SPair-71k
+%cd dataset
+!wget -nc http://cvlab.postech.ac.kr/research/SPair-71k/data/SPair-71k.tar.gz
+!tar -xzf SPair-71k.tar.gz
+!rm -f SPair-71k.tar.gz
+%cd ..
 ```
 
 - Per Evaluation:
