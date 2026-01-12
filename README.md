@@ -33,6 +33,53 @@ pip install -r requirements.txt
 %cd ..
 ```
 
+- Scarica PF-Willow 
+```bash
+%cd /content/Semantic-Correspondence--AML-project/dataset
+
+!mkdir -p pf-willow
+%cd pf-willow
+
+!wget https://www.di.ens.fr/willow/research/proposalflow/dataset/PF-dataset.zip
+!unzip -q PF-dataset.zip
+!rm PF-dataset.zip
+
+!wget https://www.robots.ox.ac.uk/~xinghui/sd4match/test_pairs.csv
+
+%cd ../..
+```
+- Scarica PF-Pascal 
+```bash
+%cd /content/Semantic-Correspondence--AML-project/dataset
+
+!mkdir -p pf-pascal
+%cd pf-pascal
+
+!wget -nc https://www.di.ens.fr/willow/research/proposalflow/dataset/PF-dataset-PASCAL.zip
+!unzip -q -n PF-dataset-PASCAL.zip
+!rm PF-dataset-PASCAL.zip
+
+!wget -N https://www.robots.ox.ac.uk/~xinghui/sd4match/pf-pascal_image_pairs.zip
+!unzip -q -o pf-pascal_image_pairs.zip
+!rm pf-pascal_image_pairs.zip
+
+!find . -name "*_pairs.csv" -exec mv {} . \;
+
+%cd ../..
+```
+
+- Carica i pesi dal drive
+```bash
+SAM
+!mkdir -p checkpoints/SAM
+!cp /content/drive/MyDrive/AMLProject-data/weights_models/sam_vit_*.pth checkpoints/SAM/ 2>/dev/null ||true
+
+DINOv3 (tutti i .pth che iniziano con dinov3_)
+!mkdir -p checkpoints/DINOv3
+!cp /content/drive/MyDrive/AMLProject-data/weights_models/dinov3_*.pth checkpoints/DINOv3/ 2>/dev/null || true
+
+```
+
 - Per Evaluation:
 ```bash
 !python eval.py --backbone [name] --category [name] --wandb
