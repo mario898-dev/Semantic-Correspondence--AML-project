@@ -7,6 +7,8 @@ import wandb
 
 from utils.cli import parse_eval_args
 from dataset.spair import SPairDataset
+from dataset.pfpascal import PFPascalDataset
+from dataset.pfwillow import PFWillowDataset
 from utils.matching import find_correspondences
 from utils.metrics import compute_pck_metrics
 from project_config import Config
@@ -222,6 +224,7 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
 
 
