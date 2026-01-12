@@ -23,6 +23,9 @@ def run_evaluation(args):
     # Questo aggiorna Config.DATASET.IMG_SIZE in base al backbone scelto (es. 'dinov3_vitl16')
     Config.DATASET.set_resolution(args.backbone)
 
+    # Questo aggiorna Config.DATASET.NAME in base al backbone scelto
+    Config.DATASET.set_dataset(args.dataset)
+
     # --- SETUP DISPOSITIVO E MODELLO ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Utilizzando il dispositivo: {device}")
@@ -53,6 +56,7 @@ def run_evaluation(args):
         raise ValueError(f"Dataset {Config.DATASET.NAME} non supportato!")
 
     print(f"IMG_SIZE usata in eval: {Config.DATASET.IMG_SIZE}")
+    print(f"DATASET usato in eval: {Config.DATASET.NAME}")
 
     # --- METRICHE ---
     alphas = Config.EVALUATOR.ALPHA
@@ -70,7 +74,7 @@ def run_evaluation(args):
     num_pairs_used = 0
 
     print(f"\n{'='*60}")
-    print(f"VALUTAZIONE TRAINING-FREE su SPair-71k ({len(test_dataset)} pairs)")
+    print(f"VALUTAZIONE TRAINING-FREE su {Config.DATASET.NAME} ({len(test_dataset)} pairs)")
     print(f"{'='*60}\n")
     
     print("Using window soft argmax (task3)" if args.use_window_soft == 1 else "Using argmax (task1)")
@@ -239,6 +243,7 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
 
 
