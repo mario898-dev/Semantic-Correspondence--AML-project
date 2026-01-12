@@ -39,6 +39,7 @@ class Config:
         MEAN = [0.485, 0.456, 0.406]
         STD = [0.229, 0.224, 0.225]
 
+        
         @classmethod
         def set_resolution(cls, model_name):
             """
@@ -56,6 +57,17 @@ class Config:
             if not found:
                 print(f"⚠️ Config: Modello '{model_name}' non riconosciuto nel mapping. Uso default: {cls.IMG_SIZE}px")
 
+        @classmethod
+        def set_dataset(cls, dataset_name):
+            """
+            Imposta automaticamente NAME
+            """
+
+            dataset_name = dataset_name.lower()
+
+            cls.NAME = dataset_name
+
+    
     class EVALUATOR:
         ALPHA = [0.05, 0.10, 0.15, 0.20]
         BY = 'bbox'
