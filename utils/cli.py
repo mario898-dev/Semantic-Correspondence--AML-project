@@ -53,6 +53,13 @@ def parse_eval_args():
         help='Se presente, usa Window Soft Argmax invece di Argmax classico'
     )
 
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="spair",
+        help='Seleziona quale dataset utilizzare'
+    )
+    
     return parser.parse_args()
 
 def parse_train_args():
