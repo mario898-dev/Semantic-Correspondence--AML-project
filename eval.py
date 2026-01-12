@@ -31,11 +31,26 @@ def run_evaluation(args):
     model.eval()
 
     # --- DATASET ---
-    test_dataset = SPairDataset(
-        cfg=Config,
-        split="test",
-        category=args.category
-    )
+    if args.dataset == "spair":
+        test_dataset = SPairDataset(
+            cfg=Config,
+            split="test",
+            category=args.category
+        )
+    elif args.dataset == "pfwillow":
+        test_dataset = PFWillowDataset(
+            cfg=Config, 
+            split="test", 
+            category=args.category
+        )
+    elif args.dataset == "pfpascal":
+        test_dataset = PFPascalDataset(
+            cfg=Config, 
+            split="test", 
+            category=args.category
+        )
+    else:
+        raise ValueError(f"Dataset {Config.DATASET.NAME} non supportato!")
 
     print(f"IMG_SIZE usata in eval: {Config.DATASET.IMG_SIZE}")
 
@@ -224,6 +239,7 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
 
 
