@@ -112,13 +112,14 @@ class AP10KDataset(CorrespondenceDataset):
 
         # 4. Calcola il pckthres usando il metodo della classe padre (che ora troverà 'trg_bbox')
         batch['pckthres'] = self.get_pckthres(batch)
-
+        batch['src_kps'] = batch['src_kps'].permute(1, 0)
+        batch['trg_kps'] = batch['trg_kps'].permute(1, 0)
         return batch
         # Not commonly used
         # batch['src_mask'] = self.get_mask(batch, self.src_impaths[idx], (Hs, Ws))
         # batch['trg_mask'] = self.get_mask(batch, self.trg_impaths[idx], (Ht, Wt))
 
-        return batch
+        
 
     def get_image(self, imnames, idx):
         """Loads and returns an RGB image given image names and index."""
