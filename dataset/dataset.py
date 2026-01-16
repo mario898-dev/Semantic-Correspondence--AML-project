@@ -37,7 +37,12 @@ class CorrespondenceDataset(Dataset):
                          'Layout/large',
                          'JPEGImages',
                          'PairAnnotation',
-                         'bbox')
+                         'bbox'),
+            'ap10k': ('ap-10k', 
+              'PairAnnotation',  
+              'JPEGImages',      
+              'PairAnnotation', 
+              'bbox')
         }
 
         benchmark = cfg.DATASET.NAME
