@@ -56,6 +56,9 @@ class AP10KDataset(CorrespondenceDataset):
                 pair_data = json.load(f)
 
             src_jspath, trg_jspath = pair_data["src_json_path"], pair_data["trg_json_path"]
+            prefix = "data/ap-10k"
+            src_jspath = src_jspath.replace(prefix, self.root, 1)
+            trg_jspath = trg_jspath.replace(prefix, self.root, 1)
             self.src_impaths.append(src_jspath.replace("json", "jpg").replace('ImageAnnotation', 'JPEGImages'))
             self.trg_impaths.append(trg_jspath.replace("json", "jpg").replace('ImageAnnotation', 'JPEGImages'))
 
