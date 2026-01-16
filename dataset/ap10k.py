@@ -117,6 +117,20 @@ class AP10KDataset(CorrespondenceDataset):
         tensor_mask = torch.from_numpy(np.array(Image.open(mask_path))).float().unsqueeze(0).unsqueeze(0) 
         return F.interpolate(tensor_mask, size=scaled_imsize, mode='nearest').int().squeeze()
 
+        def get_bbox(self, bbox_list, idx, ori_imsize, scaled_imsize):
+        """
+        ori_imsize: (w, h) originale (PIL.size)
+        scaled_imsize: (h, w) dell’immagine trasformata (tensor)
+        """
+        bbox = bbox_list[idx].clone()  # [x1, y1, x2, y2] in coordinate originali
+
+        # scala le coordinate come in PFPascal
+        bbox[0::2] *= (scaled_imsize[1] / ori_imsize[0])  # x1, x2
+        bbox[1::2] *= (scaled_imsize[0] / ori_imsize[1])  # y1, y2
+
+        return bbox
+
+
 
 class AP10KImageDataset(Dataset):
     benchmark = 'ap10k'
