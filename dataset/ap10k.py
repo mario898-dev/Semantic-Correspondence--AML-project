@@ -25,10 +25,10 @@ class AP10KDataset(CorrespondenceDataset):
         
         # data = sorted(glob(f'{self.ann_path}/{split}/*.json'))
         self.data = []
-        path = 'asset/ap-10k'
+        self.root = os.path.join(cfg.DATASET.ROOT, 'ap-10k')
         for cat_idx, cat in tqdm(enumerate(self.cls), total=len(self.cls), desc="Processing Categories"):
             np.random.seed(42)
-            pairs = sorted(glob(f'{path}/PairAnnotation/{split}/*:{cat}.json'))
+            pairs = sorted(glob(f'{self.root}/PairAnnotation/{split}/*:{cat}.json'))
             if subsample is not None and subsample > 0:
                 pairs = [pairs[ix] for ix in np.random.choice(len(pairs), subsample)]
             self.data.extend(pairs)
