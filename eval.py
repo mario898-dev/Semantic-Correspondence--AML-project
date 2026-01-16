@@ -52,6 +52,12 @@ def run_evaluation(args):
             split="test", 
             category=args.category
         )
+    elif args.dataset == "ap10k":
+        test_dataset = AP10KDataset(
+            cfg=Config,
+            split="test",
+            category=args.category
+        )
     else:
         raise ValueError(f"Dataset {Config.DATASET.NAME} non supportato!")
 
@@ -243,6 +249,7 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
 
 
