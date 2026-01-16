@@ -13,7 +13,7 @@ from .dataset import CorrespondenceDataset
 
 
 class AP10KDataset(CorrespondenceDataset):
-    benchmark = 'ap10k'
+    
 
     def __init__(self, cfg, split, category='all', transform=None, subsample=None):
         super().__init__(cfg, split=split)
