@@ -22,7 +22,11 @@ class AP10KDataset(CorrespondenceDataset):
         
         if split not in ["trn", "val", "test"]:
             raise ValueError(f"Invalid split: {split}, select from ('trn', 'val', 'test')")
-        
+        self.src_bbox = []
+        self.trg_bbox = []
+        self.src_kps = []
+        self.trg_kps = []
+        self.cls_ids = []
         # data = sorted(glob(f'{self.ann_path}/{split}/*.json'))
         self.data = []
         self.root = os.path.join(cfg.DATASET.ROOT, 'ap-10k')
