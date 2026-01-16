@@ -64,6 +64,8 @@ class CorrespondenceDataset(Dataset):
             self.spt_path = os.path.join(base_path, self.metadata[benchmark][1], split+'.txt')
         elif benchmark == 'pfwillow':
             self.spt_path = os.path.join(base_path, self.metadata[benchmark][1])
+        elif benchmark == 'ap10k':
+            self.spt_path = os.path.join(base_path, self.metadata[benchmark][1])
         else:
             raise ValueError('benchmark must be within pfpascal, spair and pfwillow')
 
