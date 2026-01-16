@@ -98,7 +98,22 @@ class AP10KDataset(CorrespondenceDataset):
 
     def __getitem__(self, idx):
         batch = super().__getitem__(idx)
+        # 1. Chiama il metodo della classe padre per ottenere immagini e keypoints base
+        batch = super().__getitem__(idx)
 
+        # 2. Ottieni le dimensioni attuali delle immagini (ridimensionate)
+        h1, w1 = batch['src_img'].shape[1:]
+        h2, w2 = batch['trg_img'].shape[1:]
+
+        # 3. Recupera e ridimensiona i Bounding Box (src e trg)
+        # Questo è necessario perché AP10K usa 'bbox' come riferimento per il PCK
+        batch['src_bbox'] = self.get_bbox(self.src_bbox, idx, batch['src_imsize'], (h1, w1))
+        batch['trg_bbox'] = self.get_bbox(self.trg_bbox, idx, batch['trg_imsize'], (h2, w2))
+
+        # 4. Calcola il pckthres usando il metodo della classe padre (che ora troverà 'trg_bbox')
+        batch['pckthres'] = self.get_pckthres(batch)
+
+        return batch
         # Not commonly used
         # batch['src_mask'] = self.get_mask(batch, self.src_impaths[idx], (Hs, Ws))
         # batch['trg_mask'] = self.get_mask(batch, self.trg_impaths[idx], (Ht, Wt))
@@ -117,7 +132,7 @@ class AP10KDataset(CorrespondenceDataset):
         tensor_mask = torch.from_numpy(np.array(Image.open(mask_path))).float().unsqueeze(0).unsqueeze(0) 
         return F.interpolate(tensor_mask, size=scaled_imsize, mode='nearest').int().squeeze()
 
-        def get_bbox(self, bbox_list, idx, ori_imsize, scaled_imsize):
+    def get_bbox(self, bbox_list, idx, ori_imsize, scaled_imsize):
         """
         ori_imsize: (w, h) originale (PIL.size)
         scaled_imsize: (h, w) dell’immagine trasformata (tensor)
