@@ -78,8 +78,8 @@ class AP10KDataset(CorrespondenceDataset):
             src_kps, src_is_visible = self._process_keypoints(src_file)
             trg_kps, trg_is_visible = self._process_keypoints(trg_file)
             both_visible = src_is_visible & trg_is_visible
-            self.src_kps.append(src_kps[both_visible])
-            self.trg_kps.append(trg_kps[both_visible])
+            self.src_kps.append(src_kps[both_visible].t())
+            self.trg_kps.append(trg_kps[both_visible].t())
 
         self.src_imnames = [os.path.basename(path) for path in self.src_impaths]
         self.trg_imnames = [os.path.basename(path) for path in self.trg_impaths]
