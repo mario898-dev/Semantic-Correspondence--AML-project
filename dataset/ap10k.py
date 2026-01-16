@@ -16,7 +16,7 @@ class AP10KDataset(CorrespondenceDataset):
     benchmark = 'ap10k'
 
     def __init__(self, cfg, split, category='all', transform=None, subsample=None):
-        super().__init__(cfg, split=split, transform=transform)
+        super().__init__(cfg, split=split)
         self.cls = ['alouatta', 'antelope', 'beaver', 'bison', 'bobcat', 'brown bear', 'buffalo', 'cat', 'cheetah', 'chimpanzee', 'cow', 'deer', 'dog', 'elephant', 'fox', 'giraffe', 'gorilla', 'hamster', 'hippo', 'horse', 'jaguar', 'leopard', 'lion', 'marmot', 'monkey', 'moose', 'mouse', 'noisy night monkey', 'otter', 'panda', 'panther', 'pig', 'polar bear', 'rabbit', 'raccoon', 'rat', 'rhino', 'sheep', 'skunk', 'snow leopard', 'spider monkey', 'squirrel', 'tiger', 'uakari', 'weasel', 'wolf', 'zebra']
         self.cls_dict = {cat: i for i, cat in enumerate(self.cls)}
         
