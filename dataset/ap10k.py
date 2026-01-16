@@ -20,8 +20,13 @@ class AP10KDataset(CorrespondenceDataset):
         self.cls = ['alouatta', 'antelope', 'beaver', 'bison', 'bobcat', 'brown bear', 'buffalo', 'cat', 'cheetah', 'chimpanzee', 'cow', 'deer', 'dog', 'elephant', 'fox', 'giraffe', 'gorilla', 'hamster', 'hippo', 'horse', 'jaguar', 'leopard', 'lion', 'marmot', 'monkey', 'moose', 'mouse', 'noisy night monkey', 'otter', 'panda', 'panther', 'pig', 'polar bear', 'rabbit', 'raccoon', 'rat', 'rhino', 'sheep', 'skunk', 'snow leopard', 'spider monkey', 'squirrel', 'tiger', 'uakari', 'weasel', 'wolf', 'zebra']
         self.cls_dict = {cat: i for i, cat in enumerate(self.cls)}
         
-        if split not in ["trn", "val", "test"]:
-            raise ValueError(f"Invalid split: {split}, select from ('trn', 'val', 'test')")
+        valid_splits = [
+            "trn", "val", "test",
+            "test_cross_family", "test_cross_species",
+            "val_cross_family", "val_cross_species",
+                        ]
+        if split not in valid_splits:
+            raise ValueError(f"Invalid split: {split}, select from {valid_splits}")
         self.src_bbox = []
         self.trg_bbox = []
         self.src_kps = []
