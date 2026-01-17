@@ -63,7 +63,7 @@ def parse_eval_args():
     parser.add_argument(
         "--split",
         type=str,
-        default='test'
+        default='test',
         help='Seleziona quale split utilizzare "test", "test_cross_species", "test_cross_family"'
     )
     
