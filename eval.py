@@ -63,7 +63,7 @@ def run_evaluation(args):
         raise ValueError(f"Dataset {Config.DATASET.NAME} non supportato!")
 
     print(f"IMG_SIZE usata in eval: {Config.DATASET.IMG_SIZE}")
-    print(f"DATASET usato in eval: {Config.DATASET.NAME}")
+    print(f"DATASET usato in eval: {Config.DATASET.NAME} split: {args.split}")
 
     # --- METRICHE ---
     alphas = Config.EVALUATOR.ALPHA
@@ -250,6 +250,7 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
 
 
