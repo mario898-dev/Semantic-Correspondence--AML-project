@@ -56,7 +56,7 @@ def run_evaluation(args):
     elif args.dataset == "ap10k":
         test_dataset = AP10KDataset(
             cfg=Config,
-            split="test",
+            split=args.split,
             category=args.category
         )
     else:
@@ -250,6 +250,7 @@ def run_evaluation(args):
 if __name__ == "__main__":
     args = parse_eval_args()
     run_evaluation(args)
+
 
 
 
