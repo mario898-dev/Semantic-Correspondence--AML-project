@@ -59,6 +59,13 @@ def parse_eval_args():
         default="spair",
         help='Seleziona quale dataset utilizzare'
     )
+
+    parser.add_argument(
+        "--split",
+        type=str,
+        default='test'
+        help='Seleziona quale split utilizzare "test", "test_cross_species", "test_cross_family"'
+    )
     
     return parser.parse_args()
 
