@@ -117,7 +117,12 @@ class AP10KDataset(CorrespondenceDataset):
 
             self.src_bbox.append(self._process_bbox(src_file)) # 4,
             self.trg_bbox.append(self._process_bbox(trg_file)) # 4,
-            self.cls_ids.append(self.cls_dict[src_file['name']])
+            name = src_file["name"]
+            if name not in self.cls_dict:
+                # aggiungi dinamicamente la nuova specie
+                self.cls_dict[name] = len(self.cls_dict)
+                self.cls.append(name)
+            self.cls_ids.append(self.cls_dict[name])
 
             src_kps, src_is_visible = self._process_keypoints(src_file)
             trg_kps, trg_is_visible = self._process_keypoints(trg_file)
