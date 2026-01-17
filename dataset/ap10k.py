@@ -15,37 +15,76 @@ from .dataset import CorrespondenceDataset
 class AP10KDataset(CorrespondenceDataset):
     
 
-    def __init__(self, cfg, split, category='all', transform=None, subsample=None):
+     def __init__(self, cfg, split, category="all", transform=None, subsample=None):
         super().__init__(cfg, split=split)
-        self.cls = ['alouatta', 'antelope', 'beaver', 'bison', 'bobcat', 'brown bear', 'buffalo', 'cat', 'cheetah', 'chimpanzee', 'cow', 'deer', 'dog', 'elephant', 'fox', 'giraffe', 'gorilla', 'hamster', 'hippo', 'horse', 'jaguar', 'leopard', 'lion', 'marmot', 'monkey', 'moose', 'mouse', 'noisy night monkey', 'otter', 'panda', 'panther', 'pig', 'polar bear', 'rabbit', 'raccoon', 'rat', 'rhino', 'sheep', 'skunk', 'snow leopard', 'spider monkey', 'squirrel', 'tiger', 'uakari', 'weasel', 'wolf', 'zebra']
+
+        # Lista specie (come nel codice di training)
+        self.cls = [
+            "alouatta", "antelope", "beaver", "bison", "bobcat", "brown bear",
+            "buffalo", "cat", "cheetah", "chimpanzee", "cow", "deer", "dog",
+            "elephant", "fox", "giraffe", "gorilla", "hamster", "hippo", "horse",
+            "jaguar", "leopard", "lion", "marmot", "monkey", "moose", "mouse",
+            "noisy night monkey", "otter", "panda", "panther", "pig", "polar bear",
+            "rabbit", "raccoon", "rat", "rhino", "sheep", "skunk", "snow leopard",
+            "spider monkey", "squirrel", "tiger", "uakari", "weasel", "wolf", "zebra",
+        ]
         self.cls_dict = {cat: i for i, cat in enumerate(self.cls)}
-        
+
         valid_splits = [
             "trn", "val", "test",
             "test_cross_family", "test_cross_species",
             "val_cross_family", "val_cross_species",
-                        ]
+        ]
         if split not in valid_splits:
             raise ValueError(f"Invalid split: {split}, select from {valid_splits}")
+
+        # liste che popoliamo in load_annotations
         self.src_bbox = []
         self.trg_bbox = []
         self.src_kps = []
         self.trg_kps = []
         self.cls_ids = []
-        # data = sorted(glob(f'{self.ann_path}/{split}/*.json'))
+
+        # root del dataset: es. /content/.../data/ap-10k
+        self.root = os.path.join(cfg.DATASET.ROOT, "ap-10k")
+        image_root = os.path.join(self.root, "ImageAnnotation")
+
+        # --- scelta delle "categorie" per costruire i path dei PairAnnotation ---
+        if split in ["trn", "val", "test"]:
+            # intra-species: usiamo le specie (come nel training code)
+            cats_for_split = self.cls
+
+        elif "cross_species" in split:
+            # cross-species: famiglie con >1 specie
+            families = os.listdir(image_root)
+            cats_for_split = [
+                fam for fam in families
+                if len(os.listdir(os.path.join(image_root, fam))) > 1
+            ]
+            cats_for_split = sorted(cats_for_split)
+
+        elif "cross_family" in split:
+            # cross-family: il category nei filename è "all"
+            cats_for_split = ["all"]
+
+        else:
+            raise ValueError(f"Split non gestito: {split}")
+
+        # --- costruzione lista file PairAnnotation ---
         self.data = []
-        self.root = os.path.join(cfg.DATASET.ROOT, 'ap-10k')
-        for cat_idx, cat in tqdm(enumerate(self.cls), total=len(self.cls), desc="Processing Categories"):
+        for cat in tqdm(cats_for_split, desc="Processing Categories"):
             np.random.seed(42)
-            pairs = sorted(glob(f'{self.root}/PairAnnotation/{split}/*:{cat}.json'))
-            if subsample is not None and subsample > 0:
-                pairs = [pairs[ix] for ix in np.random.choice(len(pairs), subsample)]
+            pattern = os.path.join(self.root, "PairAnnotation", split, f"*:{cat}.json")
+            pairs = sorted(glob(pattern))
+            if subsample is not None and subsample > 0 and len(pairs) > subsample:
+                idxs = np.random.choice(len(pairs), subsample, replace=False)
+                pairs = [pairs[ix] for ix in idxs]
             self.data.extend(pairs)
 
+        # path teorico per le feature / segmentazioni (se mai servisse la mask)
+        self.seg_path = os.path.join(os.path.dirname(self.img_path), "features")
 
-        # self.filter_category(category)
-
-        self.seg_path = os.path.join(os.path.dirname(self.img_path), 'features')
+        # carica annotazioni (bbox, keypoints, ecc.)
         self.load_annotations()
 
     # def filter_category(self, category):
