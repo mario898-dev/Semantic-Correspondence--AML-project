@@ -44,12 +44,13 @@ class DINOv3Extractor(nn.Module):
 
             if isinstance(checkpoint, dict) and "model" in checkpoint:
                 state_dict = checkpoint["model"]
-                print("ℹ️ Struttura rilevata: Dizionario nidificato. Estraggo chiave ['model'].")
+                print("Rilevata struttura checkpoint con chiave ['model']. Estrazione in corso...")
             else:
                 state_dict = checkpoint
             
-            # B. Pulizia Prefissi (FIX PER IL TUO ERRORE)
-            # Rimuove il prefisso "model." se il checkpoint è stato salvato con un wrapper
+            # Rimozione del prefisso 'model.' dalle chiavi dello state_dict.
+            # Necessario quando il checkpoint e' stato salvato con un wrapper 
+            # (es. DataParallel) che aggiunge questo prefisso
             new_state_dict = {}
             for k, v in state_dict.items():
                 if k.startswith("model."):
@@ -58,8 +59,8 @@ class DINOv3Extractor(nn.Module):
                     new_state_dict[k] = v
 
             msg = self.model.load_state_dict(new_state_dict, strict=True)
-            print(f"✅ DINOv3 caricato con successo: {msg}")
-            print(f"✅ DINOv3 caricato con successo dal file: {os.path.basename(weights)}")
+            print(f"DINOv3 caricato con successo: {msg}")
+            print(f"DINOv3 caricato con successo dal file: {os.path.basename(weights)}")
         else:
             raise FileNotFoundError(f"Pesi non trovati: {weights}")
 

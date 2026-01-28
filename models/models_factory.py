@@ -41,6 +41,6 @@ def build_model(backbone: str, device: str, num_trainable_layers: int = 0, weigh
         if hasattr(model, "setup_finetuning"):
             model.setup_finetuning(num_trainable_layers)
         else:
-            print(f"⚠️ Warning: {backbone} non ha ancora un metodo setup_finetuning.")
+            print(f"Attenzione: {backbone} non ha un metodo setup_finetuning implementato.")
 
     return model

@@ -23,7 +23,7 @@ def run_training(args):
     
     # --- 1. SETUP DISPOSITIVO E MODELLO ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device training: {device} (A100 Mode 🚀)")
+    print(f"Device training: {device}")
 
     print(f"Costruzione modello {args.backbone} con {args.trainable_layers} layer addestrabili...")
     model = build_model(args.backbone, device, num_trainable_layers=args.trainable_layers, weights=args.weights)
@@ -65,7 +65,7 @@ def run_training(args):
     drive_run_dir = os.path.join(drive_root, run_name) if drive_root else None
     if drive_run_dir:
         os.makedirs(drive_run_dir, exist_ok=True)
-        print(f"✅ Drive sync attivo: {drive_run_dir}")
+        print(f"Drive sync attivo: {drive_run_dir}")
 
     # --- 5. RESUME (Opzionale) ---
     start_epoch = 0
@@ -154,7 +154,7 @@ def run_training(args):
             )
 
             if torch.isnan(loss):
-                print("⚠️ Loss is NaN! Salto il batch.")
+                print("Attenzione: Loss NaN rilevata, batch saltato.")
                 continue
 
             loss.backward()
@@ -210,7 +210,7 @@ def run_training(args):
             wandb_run_id=wandb_run_id,
             args_dict={**vars(args), "history": training_history}
         )
-        print(f" 💾 Checkpoint salvato: {epoch_ckpt_name} (Loss: {avg_loss:.4f}, PCK: {current_pck:.2f}%)")
+        print(f"Checkpoint salvato: {epoch_ckpt_name} (Loss: {avg_loss:.4f}, PCK: {current_pck:.2f}%)")
 
         # --- 10. GESTIONE BEST MODEL ---
         # Se la PCK attuale è la migliore assoluta, aggiorniamo best.pth
@@ -220,7 +220,7 @@ def run_training(args):
             
             # Copia fisica del file
             shutil.copyfile(epoch_ckpt_path, best_ckpt_path)
-            print(f" ⭐ NUOVO BEST MODEL (PCK: {best_pck:.2f}%) -> salvato in best.pth")
+            print(f"NUOVO BEST MODEL (PCK: {best_pck:.2f}%) -> salvato in best.pth")
             
             # Sync Drive immediato per il best model
             if drive_run_dir:

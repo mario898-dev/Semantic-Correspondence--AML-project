@@ -9,41 +9,41 @@ class DINOv2Extractor(nn.Module):
         self.model = self.model.to(device)
         if weights is not None and isinstance(weights, str):
             if os.path.exists(weights):
-                print(f"📥 Caricamento pesi custom da: {weights}")
+                print(f"Caricamento pesi custom da: {weights}")
                 
-                # Caricamento sicuro (gestisce compatibilità torch 2.6+)
+                # Caricamento sicuro del checkpoint, compatibile con PyTorch 2.6+
                 try:
                     checkpoint = torch.load(weights, map_location=device, weights_only=False)
                 except TypeError:
                     checkpoint = torch.load(weights, map_location=device)
 
-                # A. Gestione se il checkpoint è un dizionario (es. contiene 'epoch', 'model')
+                # Estrazione dello state_dict se il checkpoint contiene metadati aggiuntivi
                 if isinstance(checkpoint, dict) and "model" in checkpoint:
                     state_dict = checkpoint["model"]
-                    print("ℹ️ Checkpoint: Trovata chiave 'model'.")
+                    print("Checkpoint: Rilevata struttura con chiave 'model'.")
                 else:
                     state_dict = checkpoint
 
-                # B. Pulizia Prefissi (Cruciale per il tuo file best.pth)
-                # Il tuo file ha chiavi tipo "model.blocks.0...", ma self.model vuole "blocks.0..."
+                # Rimozione del prefisso 'model.' dalle chiavi dello state_dict.
+                # Questo e' necessario quando il checkpoint e' stato salvato con un wrapper
+                # come DataParallel, che aggiunge 'model.' davanti a tutte le chiavi
                 new_state_dict = {}
                 for k, v in state_dict.items():
                     if k.startswith("model."):
-                        # Rimuove il prefisso "model."
                         new_state_dict[k.replace("model.", "", 1)] = v
                     else:
                         new_state_dict[k] = v
                 
-                # C. Caricamento effettivo
-                # strict=False evita crash se mancano pezzi non essenziali (es. la head originale)
+                # Caricamento con strict=False per tollerare eventuali differenze 
+                # tra la struttura del modello e i pesi salvati
                 msg = self.model.load_state_dict(new_state_dict, strict=False)
-                print(f"✅ Pesi custom caricati! Risultato load: {msg}")
+                print(f"Pesi custom caricati. Risultato: {msg}")
             else:
-                print(f"⚠️ ATTENZIONE: File pesi '{weights}' non trovato. Uso i pesi default di DINOv2.")
+                print(f"ATTENZIONE: File pesi '{weights}' non trovato. Uso i pesi default di DINOv2.")
         self.patch_size = self.model.patch_size
         self.embed_dim = self.model.embed_dim
         self.device = device
-        print(f"✅ {model_name} loaded (patch_size={self.patch_size}, dim={self.embed_dim})")
+        print(f"{model_name} caricato (patch_size={self.patch_size}, dim={self.embed_dim})")
 
 
     def forward(self, x):
@@ -67,4 +67,4 @@ class DINOv2Extractor(nn.Module):
             for param in self.model.blocks[i].parameters():
                 param.requires_grad = True
 
-        print(f"🔥 {self.__class__.__name__}: Sbloccati gli ultimi {num_layers}/{total_blocks} blocchi.")
+        print(f"{self.__class__.__name__}: Sbloccati gli ultimi {num_layers}/{total_blocks} blocchi per il fine-tuning.")

@@ -23,28 +23,33 @@ class SAMExtractor(nn.Module):
         except ImportError as e:
             raise ImportError(f"Errore import SAM da {abs_repo_dir}. Assicurati che la cartella esista. Errore: {e}")
 
-        # 2. Inizializzazione SAM
-        print(f"🏗️  Costruzione architettura SAM ({model_type})...")
-        # Inizializziamo senza checkpoint automatico per gestire il caricamento manualmente sotto
+        # 2. Inizializzazione dell'architettura SAM
+        # Creiamo il modello senza caricare automaticamente i pesi, 
+        # in modo da gestire manualmente il caricamento nella sezione successiva
+        print(f"Costruzione architettura SAM ({model_type})...")
         self.model = sam_model_registry[model_type](checkpoint=None)
         self.model.to(device)
 
-        # 3. Caricamento Pesi Robusto
+        # 3. Caricamento dei pesi del modello pre-addestrato
         if weights and os.path.exists(weights):
-            print(f"📥 Caricamento pesi da: {os.path.basename(weights)}")
+            print(f"Caricamento pesi da: {os.path.basename(weights)}")
             try:
-                # weights_only=False è necessario per alcuni vecchi formati pth, ma attenzione alla sicurezza
+                # weights_only=False permette di caricare checkpoint salvati in formati legacy
+                # Nota: usare con cautela file da fonti non attendibili
                 checkpoint = torch.load(weights, map_location=device, weights_only=False)
             except TypeError:
+                # Fallback per versioni di PyTorch che non supportano weights_only
                 checkpoint = torch.load(weights, map_location=device)
 
-            # Gestione caso in cui il checkpoint è un dizionario o solo state_dict
+            # Estrazione dello state_dict: il checkpoint puo' essere un dizionario 
+            # con metadati (es. epoca, optimizer) oppure direttamente lo state_dict
             if isinstance(checkpoint, dict) and "model" in checkpoint:
                 state_dict = checkpoint["model"]
             else:
                 state_dict = checkpoint
 
-            # Rimozione prefisso 'model.' se presente (comune nei salvataggi DDP)
+            # Pulizia delle chiavi: rimuoviamo il prefisso 'model.' che viene aggiunto
+            # quando si salva un modello wrappato in DataParallel o DistributedDataParallel
             new_state_dict = {}
             for k, v in state_dict.items():
                 if k.startswith("model."):
@@ -52,12 +57,14 @@ class SAMExtractor(nn.Module):
                 else:
                     new_state_dict[k] = v
             
+            # Caricamento con strict=False per ignorare eventuali chiavi mancanti 
+            # dovute a differenze tra versioni del modello
             msg = self.model.load_state_dict(new_state_dict, strict=False)
-            print(f"✅ Pesi SAM caricati! Log: {msg}")
+            print(f"Pesi SAM caricati. Report: {msg}")
         elif weights:
-            raise FileNotFoundError(f"❌ File pesi non trovato: {weights}")
+            raise FileNotFoundError(f"File pesi non trovato: {weights}")
         else:
-            print("⚠️  Nessun peso specificato: SAM inizializzato random (utile solo per debug).")
+            print("ATTENZIONE: Nessun peso specificato. SAM inizializzato con pesi casuali (utile solo per debug).")
 
         # 4. Buffer per normalizzazione (ImageNet mean/std per il preprocessing in ingresso)
         self.register_buffer("imagenet_mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
@@ -143,6 +150,6 @@ class SAMExtractor(nn.Module):
                 for param in blocks[i].parameters():
                     param.requires_grad = True
             
-            print(f"🔥 {self.__class__.__name__}: Sbloccati ultimi {num_layers}/{total_blocks} blocchi per training.")
+            print(f"{self.__class__.__name__}: Sbloccati gli ultimi {num_layers}/{total_blocks} blocchi per il fine-tuning.")
         else:
-            print(f"❄️ {self.__class__.__name__}: Encoder completamente congelato (Frozen).")
+            print(f"{self.__class__.__name__}: Encoder completamente congelato (nessun parametro addestrabile).")

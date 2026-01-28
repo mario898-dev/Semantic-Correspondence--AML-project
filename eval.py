@@ -176,7 +176,7 @@ def run_evaluation(args):
                 pck_images_cat[category][alpha].append(pck_img)
 
     # --- RISULTATI FINALI ---
-    print(f"\n✅ Valutazione completata!")
+    print(f"\nValutazione completata!")
     print(f"   Pair usati (>=1 kp valido): {num_pairs_used} / {len(test_dataset)}")
     print(
         f"   Keypoint validi: {total_keypoints_valid} / {total_keypoints_all} "
