@@ -80,6 +80,7 @@ class PFWillowDataset(CorrespondenceDataset):
         """ Computes PCK threshold """
         if self.thres == 'bbox':
             npt = batch['n_pts']
+            # Il codice calcola l'altezza e la larghezza dell'area coperta dai keypoints e sceglie la dimensione maggiore come theta
             return torch.max(batch['trg_kps'][:, :npt].max(1)[0] - batch['trg_kps'][:, :npt].min(1)[0]).clone()
         elif self.thres == 'img':
             return torch.tensor(max(batch['trg_img'].size()[1], batch['trg_img'].size()[2]))
@@ -174,3 +175,4 @@ class PFWillowImageDataset(Dataset):
         output.update({"identifier": self.imnames[index], "impath": self.impaths[index], "category": category})
 
         return output
+
