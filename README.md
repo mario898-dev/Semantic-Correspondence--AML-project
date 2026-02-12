@@ -1,126 +1,71 @@
-# Semantic - Correspondence Project
+# Semantic Correspondence with Visual Foundation Models
 
+A framework for **semantic keypoint correspondence** across object instances, built as a project for the Advanced Machine Learning (AML) course.
 
-## Come eseguire l'evaluation da Colab
+Given two images of the same object category, the system predicts pixel-level correspondences between semantically equivalent keypoints (e.g., the left eye of one cat ↔ left eye of another cat), even under significant appearance and pose variations.
 
-- Montare google drive
-```bash
-from google.colab import drive
-drive.mount("/content/drive")
-```
+---
 
-- Vai in `/content` e clona la repo con i submodules:
-```bash
-%cd /content
-git clone --recurse-submodules https://github.com/mario898-dev/Semantic-Correspondence--AML-project.git
-cd Semantic-Correspondence--AML-project
-```
+## Overview
 
-- Installa le dipendenze
-```bash
-pip install -r requirements.txt
-```
+The pipeline works in the following stages:
 
+1. **Feature Extraction** — A pre-trained vision backbone extracts dense feature maps from both source and target images.
+2. **Correspondence Matching** — Cosine similarity is computed between source keypoint features and all target feature positions; the best match is found via argmax.
+3. **Evaluation** — Predicted correspondences are evaluated using the **PCK** (Percentage of Correct Keypoints) metric at multiple thresholds (α = 0.05, 0.10, 0.15, 0.20).
+4. **Fine-Tuning** — The last *N* transformer blocks of the backbone are unfrozen and trained with a Gaussian-smoothed cross-entropy loss for improved keypoint localization.
+5. **Window Soft-Argmax** — A refined correspondence decoding strategy that replaces the standard hard argmax with a local softmax around the peak, achieving sub-pixel precision.
+6. **Robustness Testing** — Models are additionally evaluated on **PF-Pascal**, **PF-Willow**, and **AP-10k** to measure cross-dataset generalization.
 
-- Scarica SPair-71k 
-```bash
-!mkdir -p dataset
-!rm -rf dataset/SPair-71k
-%cd dataset
-!wget -nc http://cvlab.postech.ac.kr/research/SPair-71k/data/SPair-71k.tar.gz
-!tar -xzf SPair-71k.tar.gz
-!rm -f SPair-71k.tar.gz
-%cd ..
-```
+## Supported Backbones
 
-- Scarica PF-Willow 
-```bash
-%cd /content/Semantic-Correspondence--AML-project/dataset
+| Backbone | Architecture | Resolution | Key |
+|---|---|---|---|
+| **DINOv2** | ViT-S/14, ViT-B/14 | 518 × 518 | `dinov2_vits14`, `dinov2_vitb14` |
+| **DINOv3** | ViT-S/16, ViT-B/16 | 592 × 592 | `dinov3_vits16`, `dinov3_vitb16` |
+| **SAM** | ViT-B | 592 × 592 | `sam_vitb` |
 
-!mkdir -p pf-willow
-%cd pf-willow
+DINOv3 and SAM are included as **git submodules** under `external/`.
 
-!wget https://www.di.ens.fr/willow/research/proposalflow/dataset/PF-dataset.zip
-!unzip -q PF-dataset.zip
-!rm PF-dataset.zip
+## Supported Datasets
 
-!wget https://www.robots.ox.ac.uk/~xinghui/sd4match/test_pairs.csv
+| Dataset | Task | Source |
+|---|---|---|
+| **SPair-71k** | Keypoint correspondence (18 categories) | [cvlab.postech.ac.kr](http://cvlab.postech.ac.kr/research/SPair-71k/) |
+| **PF-Pascal** | Keypoint correspondence | [di.ens.fr](https://www.di.ens.fr/willow/research/proposalflow/) |
+| **PF-Willow** | Keypoint correspondence | [di.ens.fr](https://www.di.ens.fr/willow/research/proposalflow/) |
+| **AP-10k** | Animal pose estimation | via `prepare_ap10k.ipynb` |
 
-%cd ../..
-```
-- Scarica PF-Pascal 
-```bash
-%cd /content/Semantic-Correspondence--AML-project/dataset
-
-!mkdir -p pf-pascal
-%cd pf-pascal
-
-!wget -nc https://www.di.ens.fr/willow/research/proposalflow/dataset/PF-dataset-PASCAL.zip
-!unzip -q -n PF-dataset-PASCAL.zip
-!rm PF-dataset-PASCAL.zip
-
-!wget -N https://www.robots.ox.ac.uk/~xinghui/sd4match/pf-pascal_image_pairs.zip
-!unzip -q -o pf-pascal_image_pairs.zip
-!rm pf-pascal_image_pairs.zip
-
-!find . -name "*_pairs.csv" -exec mv {} . \;
-
-%cd ../..
-```
-
-- Carica i pesi dal drive
-```bash
-SAM
-!mkdir -p checkpoints/SAM
-!cp /content/drive/MyDrive/AMLProject-data/weights_models/sam_vit_*.pth checkpoints/SAM/ 2>/dev/null ||true
-
-DINOv3 (tutti i .pth che iniziano con dinov3_)
-!mkdir -p checkpoints/DINOv3
-!cp /content/drive/MyDrive/AMLProject-data/weights_models/dinov3_*.pth checkpoints/DINOv3/ 2>/dev/null || true
+## Project Structure
 
 ```
-
-- Per Evaluation:
-```bash
-!python eval.py --backbone [name] --category [name] --wandb
-```
-L'argomento backbone è obbligatorio\
-L'argomento category se non specificato indica "all" categories\
-L'argomento Wandb va inserito solo se si vuole utilizzare wandb
-
-- Per training
-```bash
-!python train.py \
-  --backbone (backbone name. Es. dinov2_vitb14) \
-  --category ('all' or 'specific category es cat') \
-  --trainable_layers (number) \
-  --epochs (number) \
-  --batch_size (dim 1) \
-  --lr 1e-4 \
-  --output_dir checkpoints \
-  --wandb \
-  --wandb_mode online
-  --wandb_artifacts
+├── models/                 # Feature extractors
+│   ├── dinov2/             # DINOv2 wrapper
+│   ├── dinov3/             # DINOv3 wrapper
+│   ├── SAM/                # SAM wrapper
+│   └── models_factory.py   # Backbone builder
+├── utils/
+│   ├── matching.py         # Similarity + argmax / window soft-argmax
+│   ├── loss.py             # Gaussian-smoothed cross-entropy loss
+│   ├── metrics.py          # PCK computation
+│   ├── geometry.py         # Coordinate transforms
+│   ├── cli.py              # CLI argument parsers
+│   ├── train_utils.py      # Checkpointing & drive sync
+│   └── validation.py       # Validation loop
+├── dataset/                # Dataset loaders (SPair, PF-Pascal, PF-Willow, AP-10k)
+├── external/               # Git submodules (DINOv3, Segment Anything)
+├── train.py                # Training entry point
+├── eval.py                 # Evaluation entry point
+├── project_config.py       # Global configuration
+└── requirements.txt        # Python dependencies
 ```
 
-- Per resume da un training interrotto
-```bash
-python train.py \
-  --resume checkpoints/TRAIN-dinov2_vitb14-all-L1/last.pth \
-  --backbone dinov2_vitb14 \
-  --category all \
-  --trainable_layers 1 \
-  --epochs 10 \
-  --batch_size 1 \
-  --lr 1e-4 \
-  --output_dir checkpoints \
-  --wandb \
-  --wandb_mode online \
-  --wandb_artifacts
-```
+## Fine-Tuning
 
-- IMG_SIZE
-  - DINOV2: 518
-  - DINOV3: 592
-  - SAM: 1024
- 
+The framework supports partial fine-tuning of the last *N* transformer blocks while keeping earlier layers frozen. Training uses a **Gaussian-smoothed cross-entropy loss** over the spatial correlation map, which provides smoother gradients around the ground-truth keypoint location compared to a standard hard-target loss. The loss implementation is adapted from [SD4Match](https://github.com/ActiveVisionLab/SD4Match) (Li et al., CVPR 2024).
+
+## Window Soft-Argmax
+
+During inference, standard hard argmax selects the single highest-scoring position on the feature map, which limits predictions to the discrete feature grid. **Window Soft-Argmax** improves on this by first identifying the hard argmax peak and then applying a temperature-scaled softmax within a local window around it. The predicted keypoint is then computed as the weighted centroid (center of mass) of this distribution, yielding **sub-pixel accurate** correspondences without any additional training cost. The technique is adapted from Zhang et al., CVPR 2024 — *Telling Left from Right: Identifying Geometry-Aware Semantic Correspondence*.
+
+
