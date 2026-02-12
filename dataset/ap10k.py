@@ -18,7 +18,7 @@ class AP10KDataset(CorrespondenceDataset):
     def __init__(self, cfg, split, category="all", transform=None, subsample=None):
       super().__init__(cfg, split=split)
 
-      # Lista specie (come nel codice di training)
+      # Species list (as in the training code)
       self.cls = [
           "alouatta", "antelope", "beaver", "bison", "bobcat", "brown bear",
           "buffalo", "cat", "cheetah", "chimpanzee", "cow", "deer", "dog",
@@ -38,24 +38,24 @@ class AP10KDataset(CorrespondenceDataset):
       if split not in valid_splits:
           raise ValueError(f"Invalid split: {split}, select from {valid_splits}")
 
-      # liste che popoliamo in load_annotations
+      # Lists populated in load_annotations
       self.src_bbox = []
       self.trg_bbox = []
       self.src_kps = []
       self.trg_kps = []
       self.cls_ids = []
 
-      # root del dataset: es. /content/.../data/ap-10k
+      # Dataset root: e.g. /content/.../data/ap-10k
       self.root = os.path.join(cfg.DATASET.ROOT, "ap-10k")
       image_root = os.path.join(self.root, "ImageAnnotation")
 
-      # --- scelta delle "categorie" per costruire i path dei PairAnnotation ---
+      # --- Choose "categories" to build PairAnnotation paths ---
       if split in ["trn", "val", "test"]:
-          # intra-species: usiamo le specie (come nel training code)
+          # intra-species: use species (as in training code)
           cats_for_split = self.cls
 
       elif "cross_species" in split:
-          # cross-species: famiglie con >1 specie
+          # cross-species: families with >1 species
           families = os.listdir(image_root)
           cats_for_split = [
               fam for fam in families
@@ -64,13 +64,13 @@ class AP10KDataset(CorrespondenceDataset):
           cats_for_split = sorted(cats_for_split)
 
       elif "cross_family" in split:
-          # cross-family: il category nei filename è "all"
+          # cross-family: the category in filenames is "all"
           cats_for_split = ["all"]
 
       else:
-          raise ValueError(f"Split non gestito: {split}")
+          raise ValueError(f"Unhandled split: {split}")
 
-      # --- costruzione lista file PairAnnotation ---
+      # --- Build PairAnnotation file list ---
       self.data = []
       for cat in tqdm(cats_for_split, desc="Processing Categories"):
           np.random.seed(42)
@@ -81,10 +81,10 @@ class AP10KDataset(CorrespondenceDataset):
               pairs = [pairs[ix] for ix in idxs]
           self.data.extend(pairs)
 
-      # path teorico per le feature / segmentazioni (se mai servisse la mask)
+      # Path for features / segmentations (if mask is ever needed)
       self.seg_path = os.path.join(os.path.dirname(self.img_path), "features")
 
-      # carica annotazioni (bbox, keypoints, ecc.)
+      # Load annotations (bbox, keypoints, etc.)
       self.load_annotations()
 
     # def filter_category(self, category):
@@ -119,7 +119,7 @@ class AP10KDataset(CorrespondenceDataset):
             self.trg_bbox.append(self._process_bbox(trg_file)) # 4,
             name = src_file["name"]
             if name not in self.cls_dict:
-                # aggiungi dinamicamente la nuova specie
+                # Dynamically add the new species
                 self.cls_dict[name] = len(self.cls_dict)
                 self.cls.append(name)
             self.cls_ids.append(self.cls_dict[name])
@@ -147,19 +147,19 @@ class AP10KDataset(CorrespondenceDataset):
 
     def __getitem__(self, idx):
         batch = super().__getitem__(idx)
-        # 1. Chiama il metodo della classe padre per ottenere immagini e keypoints base
+        # 1. Call parent class method to get base images and keypoints
         batch = super().__getitem__(idx)
 
-        # 2. Ottieni le dimensioni attuali delle immagini (ridimensionate)
+        # 2. Get current image dimensions (resized)
         h1, w1 = batch['src_img'].shape[1:]
         h2, w2 = batch['trg_img'].shape[1:]
 
-        # 3. Recupera e ridimensiona i Bounding Box (src e trg)
-        # Questo è necessario perché AP10K usa 'bbox' come riferimento per il PCK
+        # 3. Retrieve and resize Bounding Boxes (src and trg)
+        # This is necessary because AP10K uses 'bbox' as reference for PCK
         batch['src_bbox'] = self.get_bbox(self.src_bbox, idx, batch['src_imsize'], (h1, w1))
         batch['trg_bbox'] = self.get_bbox(self.trg_bbox, idx, batch['trg_imsize'], (h2, w2))
 
-        # 4. Calcola il pckthres usando il metodo della classe padre (che ora troverà 'trg_bbox')
+        # 4. Compute pckthres using the parent class method (which will now find 'trg_bbox')
         batch['pckthres'] = self.get_pckthres(batch)
         batch['src_kps'] = batch['src_kps'].permute(1, 0)
         batch['trg_kps'] = batch['trg_kps'].permute(1, 0)
@@ -189,7 +189,7 @@ class AP10KDataset(CorrespondenceDataset):
         """
         bbox = bbox_list[idx].clone()  # [x1, y1, x2, y2] in coordinate originali
 
-        # scala le coordinate come in PFPascal
+        # Scale coordinates as in PFPascal
         bbox[0::2] *= (scaled_imsize[1] / ori_imsize[0])  # x1, x2
         bbox[1::2] *= (scaled_imsize[0] / ori_imsize[1])  # y1, y2
 

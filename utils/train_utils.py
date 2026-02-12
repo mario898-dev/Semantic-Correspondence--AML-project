@@ -31,11 +31,11 @@ def _set_rng_state(state):
         if torch.cuda.is_available() and state.get("cuda") is not None and hasattr(torch.cuda, "set_rng_state_all"):
             torch.cuda.set_rng_state_all(state["cuda"])
     except Exception as e:
-        print(f" Impossibile ripristinare RNG state in modo completo: {e}")
+        print(f" Could not fully restore RNG state: {e}")
 
 
 def _optimizer_to(optimizer, device):
-    # utile quando carichi optimizer state da CPU -> GPU
+    # Useful when loading optimizer state from CPU -> GPU
     for state in optimizer.state.values():
         for k, v in state.items():
             if torch.is_tensor(v):
@@ -44,8 +44,8 @@ def _optimizer_to(optimizer, device):
 
 def save_checkpoint(path, model, optimizer, epoch, global_step, train_loss, val_pck, best_pck, wandb_run_id, args_dict):
     """
-    Salva un checkpoint completo includendo Loss e PCK.
-    Salvataggio atomico: scrive su .tmp e poi fa os.replace.
+    Save a complete checkpoint including Loss and PCK.
+    Atomic save: writes to .tmp then calls os.replace.
     """
     os.makedirs(os.path.dirname(path), exist_ok=True)
     
@@ -53,11 +53,9 @@ def save_checkpoint(path, model, optimizer, epoch, global_step, train_loss, val_
         "epoch": epoch,
         "global_step": global_step,
         
-        # --- METADATA AGGIUNTIVI ---
-        "train_loss": train_loss,  # Loss media dell'epoca
-        "val_pck": val_pck,        # PCK calcolata in validazione
-        "best_pck": best_pck,      # Miglior PCK vista finora
-        # ---------------------------
+        "train_loss": train_loss,
+        "val_pck": val_pck,
+        "best_pck": best_pck,
         
         "model": model.state_dict(),
         "optimizer": optimizer.state_dict(),
@@ -73,10 +71,10 @@ def save_checkpoint(path, model, optimizer, epoch, global_step, train_loss, val_
 
 def load_checkpoint(path, model, optimizer, device, strict=True, load_rng=True):
     """
-    Carica il checkpoint e restituisce le info utili (inclusi loss e pck).
+    Load checkpoint and return useful info (including loss and pck).
     """
     if not os.path.isfile(path):
-        raise FileNotFoundError(f"Checkpoint non trovato: {path}")
+        raise FileNotFoundError(f"Checkpoint not found: {path}")
 
     ckpt = torch.load(path, map_location=device)
 
@@ -91,11 +89,11 @@ def load_checkpoint(path, model, optimizer, device, strict=True, load_rng=True):
         "epoch": ckpt.get("epoch", 0),
         "global_step": ckpt.get("global_step", 0),
         
-        # Recupero i valori salvati (con valori di default sicuri per retro-compatibilità)
+        # Retrieve saved values (with safe defaults for backward compatibility)
         "train_loss": ckpt.get("train_loss", float("inf")),
         "val_pck": ckpt.get("val_pck", 0.0),
         "best_pck": ckpt.get("best_pck", 0.0), 
-        # Fallback se best_pck non esiste ma c'è best_loss (vecchi checkpoint)
+        # Fallback if best_pck doesn't exist but best_loss does (old checkpoints)
         "best_loss": ckpt.get("best_loss", float("inf")), 
         
         "wandb_run_id": ckpt.get("wandb_run_id", None),
@@ -108,33 +106,33 @@ def load_checkpoint(path, model, optimizer, device, strict=True, load_rng=True):
 
 def sync_checkpoints_to_drive(run_dir: str, drive_run_dir: str):
     """
-    Copia i file .pth su Drive.
+    Copy .pth files to Drive.
     """
     if not drive_run_dir:
         return
 
     os.makedirs(drive_run_dir, exist_ok=True)
     
-    # Sincronizza tutti i .pth presenti nella cartella
+    # Sync all .pth files in the directory
     files = [f for f in os.listdir(run_dir) if f.endswith(".pth")]
 
     for f in files:
         src = os.path.join(run_dir, f)
         dst = os.path.join(drive_run_dir, f)
         
-        # Copia solo se sorgente più recente o destinazione assente
+        # Copy only if source is newer or destination is missing
         if not os.path.exists(dst) or os.path.getmtime(src) > os.path.getmtime(dst):
             try:
-                # Prova rsync se disponibile (più veloce)
+                # Try rsync if available (faster)
                 subprocess.run(
                     ["rsync", "-a", "--partial", "--inplace", src, drive_run_dir + "/"],
                     check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
             except Exception:
-                # Fallback copia semplice
+                # Fallback: simple copy
                 try:
                     tmp = dst + ".tmp"
                     shutil.copy2(src, tmp)
                     os.replace(tmp, dst)
                 except Exception as e:
-                    print(f"Errore sync Drive ({f}): {e}")
+                    print(f"Error syncing to Drive ({f}): {e}")

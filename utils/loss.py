@@ -15,7 +15,7 @@ def L2normalization(feat, dim):
 
     return feat / (torch.norm(feat, dim=dim, keepdim=True) + 1e-6)
 
-class FeatMapLoss:     # Change the name to FeatMapLoss
+class FeatMapLoss:
 
     def __init__(self):
         pass
@@ -26,7 +26,7 @@ class FeatMapLoss:     # Change the name to FeatMapLoss
 
         loss = 0
 
-        valid_samples = 0  # Contatore per i campioni validi nel batch
+        valid_samples = 0
         for b in range(bz):
 
             featmap0 = src_featmaps[b:b+1].clone()
@@ -65,7 +65,7 @@ class FeatMapLoss:     # Change the name to FeatMapLoss
         if valid_samples > 0:
             loss = loss / valid_samples
         else:
-            # Se sfortunatamente tutto il batch fosse vuoto, ritorniamo 0 con gradiente per non rompere il grafo
+            # If the entire batch is empty, return 0 with gradient to preserve the computation graph
             loss = torch.tensor(0.0, device=src_featmaps.device, requires_grad=True)
 
         return loss

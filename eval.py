@@ -21,15 +21,15 @@ REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 def run_evaluation(args):
 
-    # Questo aggiorna Config.DATASET.IMG_SIZE in base al backbone scelto (es. 'dinov3_vitl16')
+    # Update Config.DATASET.IMG_SIZE based on the chosen backbone (e.g. 'dinov3_vitl16')
     Config.DATASET.set_resolution(args.backbone)
 
-    # Questo aggiorna Config.DATASET.NAME in base al backbone scelto
+    # Update Config.DATASET.NAME based on the chosen dataset
     Config.DATASET.set_dataset(args.dataset)
 
-    # --- SETUP DISPOSITIVO E MODELLO ---
+    # --- DEVICE AND MODEL SETUP ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Utilizzando il dispositivo: {device}")
+    print(f"Using device: {device}")
 
     model = build_model(args.backbone, device, 0, args.weights)
     model.eval()
@@ -60,12 +60,12 @@ def run_evaluation(args):
             category=args.category
         )
     else:
-        raise ValueError(f"Dataset {Config.DATASET.NAME} non supportato!")
+        raise ValueError(f"Dataset {Config.DATASET.NAME} not supported!")
 
-    print(f"IMG_SIZE usata in eval: {Config.DATASET.IMG_SIZE}")
-    print(f"DATASET usato in eval: {Config.DATASET.NAME} split: {args.split}")
+    print(f"IMG_SIZE used in eval: {Config.DATASET.IMG_SIZE}")
+    print(f"DATASET used in eval: {Config.DATASET.NAME} split: {args.split}")
 
-    # --- METRICHE ---
+    # --- METRICS ---
     alphas = Config.EVALUATOR.ALPHA
 
     correct_points = defaultdict(int)
@@ -81,12 +81,12 @@ def run_evaluation(args):
     num_pairs_used = 0
 
     print(f"\n{'='*60}")
-    print(f"VALUTAZIONE TRAINING-FREE su {Config.DATASET.NAME} ({len(test_dataset)} pairs)")
+    print(f"EVALUATION on {Config.DATASET.NAME} ({len(test_dataset)} pairs)")
     print(f"{'='*60}\n")
     
     print("Using window soft argmax (task3)" if args.use_window_soft == 1 else "Using argmax (task1)")
 
-    # --- WANDB INIT (solo se attivo) ---
+    # --- WANDB INIT (only if enabled) ---
     if args.wandb:
         wandb.init(
             project="AML-Semantic-Correspondence",
@@ -101,7 +101,7 @@ def run_evaluation(args):
             },
         )
 
-    # --- LOOP DI VALUTAZIONE ---
+    # --- EVALUATION LOOP ---
     for idx in tqdm(range(len(test_dataset))):
         batch = test_dataset[idx]
 
@@ -114,7 +114,7 @@ def run_evaluation(args):
         category = batch.get("category", "all")
         pckthres = batch["pckthres"].item()
 
-        # Keypoint validi
+        # Valid keypoints
         valid_mask = (
             (src_kps[:, 0] >= 0) & (src_kps[:, 1] >= 0) &
             (trg_kps[:, 0] >= 0) & (trg_kps[:, 1] >= 0)
@@ -130,23 +130,23 @@ def run_evaluation(args):
 
         num_pairs_used += 1
 
-        # Estrazione feature
+        # Feature extraction
         with torch.no_grad():
             forward_kwargs = {}
             
-            # Passiamo extract_layer SOLO se è SAM e se l'utente l'ha specificato
+            # Pass extract_layer ONLY if SAM and user specified it
             if "sam" in args.backbone and args.extract_layer is not None:
                 forward_kwargs["extract_layer"] = args.extract_layer
             
-            # Chiamata al modello con unpacking dei kwargs
-            # Nota: [0] serve perché il tuo eval si aspetta di rimuovere la dimensione batch
+            # Model forward call with kwargs unpacking
+            # Note: [0] removes the batch dimension
             src_feats = model(src_img, **forward_kwargs)[0]  # (C, Hf, Wf)
             trg_feats = model(trg_img, **forward_kwargs)[0]  # (C, Hf, Wf)
 
-        # Dimensioni reali immagine (coerenti con i keypoint del dataset)
+        # Real image dimensions (consistent with dataset keypoints)
         img_h, img_w = src_img.shape[-2:]
 
-        # Corrispondenze
+        # Correspondences
         pred_kps_valid = find_correspondences(
             src_feats,
             trg_feats,
@@ -156,7 +156,7 @@ def run_evaluation(args):
             use_window_soft=args.use_window_soft
         ).cpu()
 
-        # Metriche
+        # Metrics
         for alpha in alphas:
             num_correct, num_total, pck_img = compute_pck_metrics(
                 pred_kps_valid,
@@ -175,11 +175,11 @@ def run_evaluation(args):
                 pck_images[alpha].append(pck_img)
                 pck_images_cat[category][alpha].append(pck_img)
 
-    # --- RISULTATI FINALI ---
-    print(f"\nValutazione completata!")
-    print(f"   Pair usati (>=1 kp valido): {num_pairs_used} / {len(test_dataset)}")
+    # --- FINAL RESULTS ---
+    print(f"\nEvaluation completed!")
+    print(f"   Pairs used (>=1 valid kp): {num_pairs_used} / {len(test_dataset)}")
     print(
-        f"   Keypoint validi: {total_keypoints_valid} / {total_keypoints_all} "
+        f"   Valid keypoints: {total_keypoints_valid} / {total_keypoints_all} "
         f"({100 * total_keypoints_valid / total_keypoints_all:.1f}%)"
     )
 
@@ -201,7 +201,7 @@ def run_evaluation(args):
             f"per-image: {pck_per_image[a]:6.2f}%"
         )
 
-    # --- PCK (per category): stampa sempre, wandb solo se attivo ---
+    # --- PCK (per category): always print, wandb only if enabled ---
     print("\n--- PCK (per category) ---")
 
     cat_table = None
@@ -229,17 +229,17 @@ def run_evaluation(args):
             pp_vals.append(pp)
             pi_vals.append(pi)
 
-        # stampa sempre
+        # Always print
         pretty = [f"{cat:>15}"]
         for i, a in enumerate(alphas):
             pretty.append(f"PCK@{a:.2f} pp {pp_vals[i]:6.2f}% | pi {pi_vals[i]:6.2f}%")
         print("   ".join(pretty))
 
-        # tabella wandb solo se attivo
+        # Wandb table only if enabled
         if args.wandb:
             cat_table.add_data(cat, *pp_vals, *pi_vals)
 
-    # --- WANDB LOG (solo se attivo) ---
+    # --- WANDB LOG (only if enabled) ---
     if args.wandb:
         wandb.log({f"PCK@{a:.2f}_per_point": pck_per_point[a] for a in alphas})
         wandb.log({f"PCK@{a:.2f}_per_image": pck_per_image[a] for a in alphas})

@@ -14,7 +14,7 @@ def parse_eval_args():
         "--category",
         type=str,
         default="all",
-        help="Categoria SPair-71k (es. cat, dog, car, all)"
+        help="SPair-71k category (e.g. cat, dog, car, all)"
     )
     
 
@@ -28,7 +28,7 @@ def parse_eval_args():
     parser.add_argument(
         "--wandb",
         action="store_true",
-        help="Abilita wandb logging"
+        help="Enable wandb logging"
     )
 
     parser.add_argument(
@@ -36,35 +36,35 @@ def parse_eval_args():
         type=str,
         default="online",
         choices=["online", "offline", "disabled"],
-        help="Modalità wandb"
+        help="Wandb mode"
     )
 
     parser.add_argument(
         "--extract_layer",
         type=int,
         default=None,
-        help="Indice del layer da estrarre (solo per SAM). Es: 8 per il layer 9."
+        help="Layer index to extract (SAM only). E.g.: 8 for layer 9."
     )
 
     parser.add_argument(
         "--use_window_soft",
         type=int,
         default=0,
-        help='Se presente, usa Window Soft Argmax invece di Argmax classico'
+        help='If set, use Window Soft Argmax instead of classic Argmax'
     )
 
     parser.add_argument(
         "--dataset",
         type=str,
         default="spair",
-        help='Seleziona quale dataset utilizzare'
+        help='Select which dataset to use'
     )
 
     parser.add_argument(
         "--split",
         type=str,
         default='test',
-        help='Seleziona quale split utilizzare "test", "test_cross_species", "test_cross_family"'
+        help='Select which split to use: "test", "test_cross_species", "test_cross_family"'
     )
     
     return parser.parse_args()
@@ -72,7 +72,7 @@ def parse_eval_args():
 def parse_train_args():
     parser = argparse.ArgumentParser("AML Semantic Correspondence Training")
 
-    # --- Argomenti Comuni (Modello e Dati) ---
+    # --- Common arguments (Model and Data) ---
     parser.add_argument(
         "--backbone",
         type=str,
@@ -85,36 +85,36 @@ def parse_train_args():
         "--category",
         type=str,
         default="all",
-        help="Categoria SPair-71k per il training (default: all)"
+        help="SPair-71k category for training (default: all)"
     )
 
-    # --- Argomenti Training ---
+    # --- Training arguments ---
     parser.add_argument(
         "--lr",
         type=float,
         default=1e-4,
-        help="Learning Rate per i layer finetunati"
+        help="Learning rate for finetuned layers"
     )
 
     parser.add_argument(
         "--epochs",
         type=int,
         default=10,
-        help="Numero totale di epoche"
+        help="Total number of epochs"
     )
 
     parser.add_argument(
         "--batch_size",
         type=int,
         default=1,
-        help="Batch size (consigliato 1 per gestire numeri variabili di keypoints)"
+        help="Batch size (recommended 1 to handle variable numbers of keypoints)"
     )
 
     parser.add_argument(
         "--trainable_layers",
         type=int,
         default=1,
-        help="Numero di blocchi finali del backbone da sbloccare per il fine-tuning"
+        help="Number of final backbone blocks to unfreeze for fine-tuning"
     )
     parser.add_argument(
         "--weights",
@@ -126,21 +126,21 @@ def parse_train_args():
         "--sigma",
         type=float,
         default=2.0,
-        help="Sigma della Gaussiana per la Window Soft Target Loss"
+        help="Sigma of the Gaussian for the Window Soft Target Loss"
     )
     
     parser.add_argument(
         "--output_dir",
         type=str,
         default="checkpoints",
-        help="Cartella dove salvare i pesi del modello"
+        help="Directory to save model weights"
     )
 
     # --- WandB ---
     parser.add_argument(
         "--wandb",
         action="store_true",
-        help="Abilita il logging su WandB"
+        help="Enable WandB logging"
     )
 
     parser.add_argument(
@@ -148,16 +148,16 @@ def parse_train_args():
         type=str,
         default="online",
         choices=["online", "offline", "disabled"],
-        help="Modalità WandB"
+        help="WandB mode"
     )
 
     parser.add_argument("--resume", type=str, default=None,
-                    help="Path a un checkpoint .pth (es. .../last.pth) per riprendere il training")
+                    help="Path to a .pth checkpoint (e.g. .../last.pth) to resume training")
     
     parser.add_argument("--wandb_run_id", type=str, default=None,
-                    help="(Opzionale) Forza un run id wandb. Se non dato, viene salvato/riusato dal checkpoint.")
+                    help="(Optional) Force a wandb run id. If not given, it is saved/reused from checkpoint.")
     
     parser.add_argument("--wandb_artifacts", action="store_true",
-                    help="Se attivo, carica last/best checkpoint come wandb Artifacts (utile su Colab)")
+                    help="If active, upload last/best checkpoint as wandb Artifacts (useful on Colab)")
 
     return parser.parse_args()

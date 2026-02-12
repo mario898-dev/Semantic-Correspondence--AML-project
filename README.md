@@ -31,9 +31,9 @@ DINOv3 and SAM are included as **git submodules** under `external/`.
 
 | Dataset | Task | Source |
 |---|---|---|
-| **SPair-71k** | Keypoint correspondence (18 categories) | [cvlab.postech.ac.kr](http://cvlab.postech.ac.kr/research/SPair-71k/) |
-| **PF-Pascal** | Keypoint correspondence | [di.ens.fr](https://www.di.ens.fr/willow/research/proposalflow/) |
-| **PF-Willow** | Keypoint correspondence | [di.ens.fr](https://www.di.ens.fr/willow/research/proposalflow/) |
+| **SPair-71k** | Keypoint correspondence| [link](http://cvlab.postech.ac.kr/research/SPair-71k/) |
+| **PF-Pascal** | Keypoint correspondence | [link](https://www.di.ens.fr/willow/research/proposalflow/) |
+| **PF-Willow** | Keypoint correspondence | [link](https://www.di.ens.fr/willow/research/proposalflow/) |
 | **AP-10k** | Animal pose estimation | via `prepare_ap10k.ipynb` (adapted from [GeoAware-SC](https://github.com/Junyi42/GeoAware-SC)) |
 
 ## Project Structure

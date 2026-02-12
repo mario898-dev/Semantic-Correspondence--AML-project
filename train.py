@@ -14,41 +14,41 @@ from models.models_factory import build_model
 from utils.cli import parse_train_args
 from utils.loss import FeatMapLoss
 from utils.train_utils import save_checkpoint, load_checkpoint, sync_checkpoints_to_drive
-from utils.validation import validate_epoch  # Importiamo la nuova funzione
+from utils.validation import validate_epoch
 
 
 def run_training(args):
 
     Config.DATASET.set_resolution(args.backbone)
     
-    # --- 1. SETUP DISPOSITIVO E MODELLO ---
+    # --- 1. DEVICE AND MODEL SETUP ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device training: {device}")
 
-    print(f"Costruzione modello {args.backbone} con {args.trainable_layers} layer addestrabili...")
+    print(f"Building model {args.backbone} with {args.trainable_layers} trainable layers...")
     model = build_model(args.backbone, device, num_trainable_layers=args.trainable_layers, weights=args.weights)
     model.train()
 
-    # --- 2. DATASET E DATALOADER ---
-    print(f"Caricamento SPair-71k (split: train, category: {args.category})...")
+    # --- 2. DATASET AND DATALOADER ---
+    print(f"Loading SPair-71k (split: train, category: {args.category})...")
     train_dataset = SPairDataset(cfg=Config, split="trn", category=args.category)
     
-    # Configurazione ottimizzata per A100 (più workers, shuffle attivo)
+    # Optimized configuration for A100 (more workers, shuffle enabled)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=8,  # Aumentato per evitare colli di bottiglia CPU
+        num_workers=8,
         collate_fn=None
     )
-    print(f"Training su {len(train_dataset)} coppie.")
+    print(f"Training on {len(train_dataset)} pairs.")
 
-    print(f"IMG_SIZE usata in train: {Config.DATASET.IMG_SIZE}")
+    print(f"IMG_SIZE used in train: {Config.DATASET.IMG_SIZE}")
     # --- 3. OPTIMIZER E LOSS ---
     params_to_optimize = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.AdamW(params_to_optimize, lr=args.lr)
     criterion = FeatMapLoss()
-    print(f"Parametri da ottimizzare: {len(params_to_optimize)} tensor(s).")
+    print(f"Parameters to optimize: {len(params_to_optimize)} tensor(s).")
 
     # --- 4. OUTPUT DIR E VARIABILI STATO ---
     os.makedirs(args.output_dir, exist_ok=True)
@@ -56,48 +56,48 @@ def run_training(args):
     run_dir = os.path.join(args.output_dir, run_name)
     os.makedirs(run_dir, exist_ok=True)
 
-    # Variabili per tracking
+    # Tracking variables
     best_pck = 0.0
-    training_history = []  # Lista per salvare storico Loss/PCK
+    training_history = []
 
-    # Setup Drive Sync (opzionale)
+    # Drive Sync setup (optional)
     drive_root = os.environ.get("DRIVE_SYNC_DIR", "").strip()
     drive_run_dir = os.path.join(drive_root, run_name) if drive_root else None
     if drive_run_dir:
         os.makedirs(drive_run_dir, exist_ok=True)
-        print(f"Drive sync attivo: {drive_run_dir}")
+        print(f"Drive sync enabled: {drive_run_dir}")
 
-    # --- 5. RESUME (Opzionale) ---
+    # --- 5. RESUME (Optional) ---
     start_epoch = 0
     global_step = 0
     wandb_run_id = getattr(args, "wandb_run_id", None)
 
     if getattr(args, "resume", None):
         if os.path.isfile(args.resume):
-            print(f" Resume da checkpoint: {args.resume}")
+            print(f" Resuming from checkpoint: {args.resume}")
             info = load_checkpoint(args.resume, model, optimizer, device)
             start_epoch = info["epoch"] + 1
             global_step = info["global_step"]
             
-            # Recupero Best PCK (gestione retro-compatibilità)
+            # Recover Best PCK (backward compatibility handling)
             best_pck = info.get("best_pck", 0.0)
             if best_pck == 0.0 and "best_loss" in info:
-                # Se il checkpoint usava best_loss come metrica geometrica
+                # If checkpoint used best_loss as geometric metric
                 best_pck = info["best_loss"]
             
-            # Recupero Storico
+            # Recover history
             if "args" in info and isinstance(info["args"], dict):
                 training_history = info["args"].get("history", [])
-                # Se lo storico esiste, ricalcoliamo il best_pck reale da lì per sicurezza
+                # If history exists, recalculate the real best_pck from it for safety
                 if training_history:
                     hist_best = max([h['val_pck'] for h in training_history])
                     if hist_best > best_pck:
                         best_pck = hist_best
 
             wandb_run_id = info.get("wandb_run_id", wandb_run_id)
-            print(f" Ripartenza: Epoca {start_epoch}, Best PCK precedente: {best_pck:.2f}%")
+            print(f" Resuming: Epoch {start_epoch}, Previous Best PCK: {best_pck:.2f}%")
         else:
-            print(f" args.resume passato ma file non trovato: {args.resume}")
+            print(f" args.resume specified but file not found: {args.resume}")
 
     # --- 6. WANDB INIT ---
     if args.wandb:
@@ -141,7 +141,7 @@ def run_training(args):
             src_feats = out_src[0] if isinstance(out_src, (tuple, list)) else out_src
             trg_feats = out_trg[0] if isinstance(out_trg, (tuple, list)) else out_trg
 
-            # Calcolo Loss
+            # Compute Loss
             loss = criterion(
                 src_featmaps=src_feats,
                 trg_featmaps=trg_feats,
@@ -154,7 +154,7 @@ def run_training(args):
             )
 
             if torch.isnan(loss):
-                print("Attenzione: Loss NaN rilevata, batch saltato.")
+                print("Warning: NaN loss detected, skipping batch.")
                 continue
 
             loss.backward()
@@ -170,15 +170,15 @@ def run_training(args):
             if args.wandb:
                 wandb.log({"train_loss": loss_val, "global_step": global_step}, step=global_step)
 
-        # Calcolo Loss Media
+        # Compute Average Loss
         avg_loss = (epoch_loss / num_batches) if num_batches > 0 else 0.0
-        print(f"Fine Epoca {epoch+1} - Avg Loss: {avg_loss:.6f}")
+        print(f"End of Epoch {epoch+1} - Avg Loss: {avg_loss:.6f}")
 
-        # --- 8. VALIDAZIONE COMPLETA ---
-        # Eseguiamo la validazione su tutto il set per avere la PCK reale
+        # --- 8. FULL VALIDATION ---
+        # Run validation on the full set to get the real PCK
         current_pck = validate_epoch(model, device, args.category)
 
-        # Aggiorniamo lo storico
+        # Update history
         epoch_stats = {
             "epoch": epoch,
             "train_loss": avg_loss,
@@ -193,11 +193,11 @@ def run_training(args):
                 "epoch": epoch
             }, step=global_step)
 
-        # --- 9. SALVATAGGIO CHECKPOINT (Uno per epoca) ---
+        # --- 9. SAVE CHECKPOINT (One per epoch) ---
         epoch_ckpt_name = f"checkpoint_ep{epoch}.pth"
         epoch_ckpt_path = os.path.join(run_dir, epoch_ckpt_name)
 
-        # Salviamo tutto: stato, optimizer, Loss, PCK, storico completo
+        # Save everything: state, optimizer, Loss, PCK, full history
         save_checkpoint(
             path=epoch_ckpt_path,
             model=model,
@@ -210,23 +210,23 @@ def run_training(args):
             wandb_run_id=wandb_run_id,
             args_dict={**vars(args), "history": training_history}
         )
-        print(f"Checkpoint salvato: {epoch_ckpt_name} (Loss: {avg_loss:.4f}, PCK: {current_pck:.2f}%)")
+        print(f"Checkpoint saved: {epoch_ckpt_name} (Loss: {avg_loss:.4f}, PCK: {current_pck:.2f}%)")
 
-        # --- 10. GESTIONE BEST MODEL ---
-        # Se la PCK attuale è la migliore assoluta, aggiorniamo best.pth
+        # --- 10. BEST MODEL MANAGEMENT ---
+        # If current PCK is the best ever, update best.pth
         if current_pck > best_pck:
             best_pck = current_pck
             best_ckpt_path = os.path.join(run_dir, "best.pth")
             
-            # Copia fisica del file
+            # Physical file copy
             shutil.copyfile(epoch_ckpt_path, best_ckpt_path)
-            print(f"NUOVO BEST MODEL (PCK: {best_pck:.2f}%) -> salvato in best.pth")
+            print(f"NEW BEST MODEL (PCK: {best_pck:.2f}%) -> saved to best.pth")
             
-            # Sync Drive immediato per il best model
+            # Immediate Drive sync for the best model
             if drive_run_dir:
                 sync_checkpoints_to_drive(run_dir, drive_run_dir)
 
-    print("\nTraining Completato.")
+    print("\nTraining Completed.")
     if args.wandb:
         wandb.finish()
 
