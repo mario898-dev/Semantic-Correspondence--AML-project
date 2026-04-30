@@ -68,8 +68,7 @@ The framework supports partial fine-tuning of the last *N* transformer blocks wh
 
 During inference, standard hard argmax selects the single highest-scoring position on the feature map, which limits predictions to the discrete feature grid. **Window Soft-Argmax** improves on this by first identifying the hard argmax peak and then applying a temperature-scaled softmax within a local window around it. The predicted keypoint is then computed as the weighted centroid (center of mass) of this distribution, yielding **sub-pixel accurate** correspondences without any additional training cost. The technique is adapted from Zhang et al., CVPR 2024 — *Telling Left from Right: Identifying Geometry-Aware Semantic Correspondence*.
 
-## Our Work
-[Semantic Correspondence with Visual Foundation Models.pdf](https://github.com/user-attachments/files/27245853/Semantic.Correspondence.with.Visual.Foundation.Models.pdf)
-
-
+### 📄 Our Work
+[![Leggi la Relazione](./preview.png)](https://github.com/user-attachments/files/27245853/Semantic.Correspondence.with.Visual.Foundation.Models.pdf)
+*Click on the image above to open the full PDF*
 
